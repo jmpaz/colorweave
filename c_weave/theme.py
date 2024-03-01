@@ -3,62 +3,50 @@ import subprocess
 import tempfile
 
 
-class Theme:
-    def __init__(self, colorscheme, wallpaper, variant_name="base"):
-        self.colorscheme = colorscheme
-        self.wallpaper = wallpaper
-        self.variant = self.colorscheme.get_variant(variant_name)
-
-
-class Wallpaper:
-    def __init__(self, file, resolution=None, aspect_ratio=None):
-        self.file = file
-        self.resolution = resolution
-        self.aspect_ratio = aspect_ratio
-
-
-class ColorScheme:
+class Scheme:
     def __init__(self, name):
         self.name = name
         self.variants = {}
 
     def add_variant(self, variant):
         self.variants[variant.name] = variant
+        return variant
 
-    def get_variant(self, variant_name):
-        return self.variants.get(variant_name, None)
+    def get_details(self):
+        variants_detail = {
+            variant: self.variants[variant].get_details() for variant in self.variants
+        }
+        return {"Theme Name": self.name, "Variants": variants_detail}
 
 
-class SchemeVariant:
+class Variant:
     def __init__(self, name, colors):
+        super().__init__()
         self.name = name
         self.colors = dict(colors)
 
     def get_color(self, color_name):
         return self.colors.get(color_name, None)
 
+    def get_details(self):
+        return {"Variant Name": self.name, "Colors": self.colors}
 
-def apply_colorscheme(scheme_variant, backend="wallust"):
-    # Map the SchemeVariant colors to the pywal format
-    pywal_scheme = {
-        "special": {
-            "background": scheme_variant.get_color("background"),
-            "foreground": scheme_variant.get_color("foreground"),
-            "cursor": scheme_variant.get_color("color1"),
-        },
-        "colors": {
-            f"color{i}": scheme_variant.get_color(f"color{i}") for i in range(16)
-        },
-    }
+    def apply(self):
+        pywal_scheme = {
+            "special": {
+                "background": self.get_color("background"),
+                "foreground": self.get_color("foreground"),
+                "cursor": self.get_color("color1"),
+            },
+            "colors": {f"color{i}": self.get_color(f"color{i}") for i in range(16)},
+        }
 
-    # Convert the scheme to JSON
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-        json.dump(pywal_scheme, tmp)
-        tmp_path = tmp.name
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+            json.dump(pywal_scheme, tmp)
+            tmp_path = tmp.name
 
-    # Apply the colorscheme with wallust
-    command = f"wallust cs {tmp_path} --format pywal" if backend == "wallust" else ""
-    try:
-        subprocess.run(command, check=True, shell=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error applying colorscheme with {backend}: {e}")
+        command = f"wallust cs {tmp_path} --format pywal"
+        try:
+            subprocess.run(command, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error applying colorscheme: {e}")

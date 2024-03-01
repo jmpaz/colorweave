@@ -2,16 +2,18 @@
 # ruff: noqa: E402
 ```
 
-## Workflow
+## Scheme definition
 
 ### Manually define a colorscheme
 ```python
-from c_weave.theme import ColorScheme, SchemeVariant, Theme, Wallpaper
+from c_weave.theme import Scheme, Variant
 
-wallpaper = Wallpaper('nord_blue.png', resolution='3840x2160')
+# Initialize an empty theme
+nord = Scheme(name='nord')
 
-nord = ColorScheme('Nord')
-nord_dark = SchemeVariant('dark', [
+# Create a variant
+nord_dark = nord.add_variant(
+  Variant(name='dark', colors = [
     ('background', '#2E3440'),
     ('foreground', '#D8DEE9'),
     ('color0', '#3B4252'),
@@ -30,20 +32,9 @@ nord_dark = SchemeVariant('dark', [
     ('color13', '#B48EAD'),
     ('color14', '#8FBCBB'),
     ('color15', '#ECEFF4')
-])
+]))
 
-nord.add_variant(nord_dark)
-theme = Theme(colorscheme=nord, wallpaper=wallpaper, variant_name='dark')
-
-print(f"colors 0-15: {', '.join(nord_dark.get_color(f'color{i}') for i in range(16))}")
-print(f"Background, foreground: {nord_dark.get_color('background')}, {nord_dark.get_color('foreground')}")
-print("Wallpaper resolution:", theme.wallpaper.resolution)
+# Apply the theme
+nord_dark.apply()
 ```
 
-
-### Apply
-```python
-from c_weave.theme import apply_colorscheme
-
-apply_colorscheme(nord_dark)
-```
