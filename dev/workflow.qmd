@@ -48,21 +48,23 @@ from comfy_bridge.client import Generation
 # Manually specify colors to include in prompt
 wall_colors="blue, green"
 
-# Create a Generation object
-gen = Generation(
-    prompt=f"a beautiful landscape, {wall_colors} palette",
-    prompt_negative="poor quality",
-    width=1365,
-    height=768,
-    use_refiner=False,
-    sampler="euler",
-    scheduler="normal",
-    steps=30,
-    cfg=8.5,
-    seed=None,
-    loras=None,
-    workflow_path="data/workflows/sdxl-lora.json"
-)
+# Generate a wallpaper
+params = {
+  "prompt": f"a beautiful landscape, {wall_colors} palette",
+  "prompt_negative": "poor quality",
+  "width": 1365,
+  "height": 768,
+  "use_refiner": False,
+  "sampler": "euler",
+  "scheduler": "normal",
+  "steps": 30,
+  "cfg": 8.5,
+  "seed": None,
+  "loras": None,
+  "workflow_path": "data/workflows/sdxl-lora.json"
+}
 
-gen.inference()
+gen = Generation(**params)
+output = gen.output
 ```
+
