@@ -55,12 +55,39 @@ print(colors)
 ### Generate a wallpaper from a palette
 
 ```python
+# Get readable color names
+import webcolors
+from webcolors import hex_to_rgb
+
+def closest_color(requested_color):
+    min_colors = {}
+    for key, name in webcolors.CSS3_HEX_TO_NAMES.items():
+        r_c, g_c, b_c = webcolors.hex_to_rgb(key)
+        rd = (r_c - requested_color[0]) ** 2
+        gd = (g_c - requested_color[1]) ** 2
+        bd = (b_c - requested_color[2]) ** 2
+        min_colors[(rd + gd + bd)] = name
+    return min_colors[min(min_colors.keys())]
+
+
+def get_color_name(hex_color):
+    try:
+        # Direct conversion from hex to name if exact match is found
+        return webcolors.hex_to_name(hex_color)
+    except ValueError:
+        # Calculate closest color name if no exact match is found
+        return closest_color(hex_to_rgb(hex_color))
+
+print(colors)
+named_colors = [get_color_name(hex_color) for hex_color in colors]
+colors_str = ", ".join(named_colors)
+print(colors_str)
+```
+
+```py
+# Generate the wallpaper
 from c_weave.generate import generate_wallpaper
 
-# Manually specify colors to include in prompt
-colors = "blue, green"
-
-# Generate wallpaper
-wallpaper = generate_wallpaper(colors)
+wallpaper = generate_wallpaper(colors_str)
 ```
 
