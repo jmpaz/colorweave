@@ -39,7 +39,19 @@ nord_dark.apply()
 ```
 
 
+## Palette generation
+### Extract colors from an image
+
+```python
+from c_weave.utils.color import infer_palette
+
+image_path = "outputs/comfy/20240302-074601_ca3a0bb3-5ac0-4653-8a5e-b63f6088fddb.png"
+colors = infer_palette(image_path, n=4)
+print(colors)
+```
+
 ## Wallpaper generation
+
 ### Generate a wallpaper from a palette
 
 ```python
