@@ -3,7 +3,7 @@ from comfy_bridge.client import Generation
 
 def generate_wallpaper(colors: str):
     params = {
-        "prompt": f"a beautiful landscape, {colors} palette",
+        "prompt": f"a beautiful landscape, {colors} hues",
         "prompt_negative": "poor quality",
         "width": 1365,
         "height": 768,
