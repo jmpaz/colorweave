@@ -10,7 +10,6 @@ from c_weave.theme import Scheme, Variant
 
 # Initialize an empty theme
 nord = Scheme(name='nord')
-
 # Create a variant
 nord_dark = nord.add_variant(
   Variant(name='dark', colors = [
@@ -45,7 +44,7 @@ nord_dark.apply()
 ```python
 from c_weave.utils.color import infer_palette, estimate_colors
 
-image_path = "outputs/comfy/20240302-085945_3ff37909-466b-4321-9e29-3f4575eda51c.png"
+image_path = "data/samples/image.png"
 
 colors = infer_palette(image_path, n=4)
 named_colors = estimate_colors(colors)
@@ -69,3 +68,8 @@ print(colors_str)
 wallpaper = generate_wallpaper(colors_str)
 ```
 
+```py
+from c_weave.generate import upscale
+
+wallpaper_upscaled = upscale(wallpaper)  # takes much longer than the initial generation
+```
