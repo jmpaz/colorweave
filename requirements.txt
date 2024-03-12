@@ -1,1 +1,2 @@
 git+https://github.com/jmpaz/comfy-bridge.git
+anthropic[bedrock]

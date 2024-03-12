@@ -46,13 +46,51 @@ from c_weave.utils.color import infer_palette, estimate_colors
 
 image_path = "data/samples/image.png"
 
-colors = infer_palette(image_path, n=4)
+colors = infer_palette(image_path, n=6)
 named_colors = estimate_colors(colors)
 
 print(colors)
 print(named_colors)
 ```
 
+### Pass colors to Claude Sonnet to generate a palette
+
+Create client
+```python
+import os
+from anthropic import AnthropicBedrock
+
+client = AnthropicBedrock(
+    aws_access_key=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    # aws_session_token="<session_token>",
+    aws_region="us-east-1",
+)
+```
+
+```py
+# load initializing prompt
+prompt = open("data/prompts/palette_design/base.md").read()
+
+# prepare a command to append to the prompt
+colors_str = list(zip(colors, named_colors))
+command = f"<cmd>/design [{colors_str}]</cmd>"
+
+## example: `<cmd>/design ['#f6efd9 (cornsilk)', '#6e7e88 (slategray)', '#2d506f (darkslateblue)', '#c9cdbe (lightgray)', '#efe0c0 (wheat)', '#a4aaa4 (darkgray)']</cmd>`
+
+messages = [
+    {"role": "user", "content": prompt},
+    {"role": "assistant", "content": "Understood; awaiting command."},
+    {"role": "user", "content": command}
+]
+output = client.messages.create(
+    model="anthropic.claude-3-sonnet-20240229-v1:0",
+    max_tokens=512,
+    messages=messages
+)
+
+output.content
+```
 
 
 ## Wallpaper generation
