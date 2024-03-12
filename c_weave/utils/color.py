@@ -9,6 +9,13 @@ from math import sqrt
 import random
 from PIL import Image
 
+import re
+
+
+def parse_output(message: str):
+    """Extract hex codes from an input string in the order they appear."""
+    return re.findall(r"#[0-9a-fA-F]{6}", message)
+
 
 def estimate_colors(hex_colors: list):
     """Estimate color names from hex codes with colormath and webcolors."""

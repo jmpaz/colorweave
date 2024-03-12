@@ -92,6 +92,18 @@ output = client.messages.create(
 output.content
 ```
 
+### Parse the response
+```py
+from c_weave.utils.color import parse_output
+
+# optionally load from a file
+output = open("outputs/colors/claude/lush.md").read()
+
+parsed_colors = parse_output(output)
+parsed_colors
+
+```
+
 
 ## Wallpaper generation
 
