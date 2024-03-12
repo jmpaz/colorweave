@@ -2,41 +2,6 @@
 # ruff: noqa: E402
 ```
 
-## Scheme definition
-
-### Manually define a colorscheme
-```python
-from c_weave.theme import Scheme, Variant
-
-# Initialize an empty theme
-nord = Scheme(name='nord')
-# Create a variant
-nord_dark = nord.add_variant(
-  Variant(name='dark', colors = [
-    ('background', '#2E3440'),
-    ('foreground', '#D8DEE9'),
-    ('color0', '#3B4252'),
-    ('color1', '#BF616A'),
-    ('color2', '#A3BE8C'),
-    ('color3', '#EBCB8B'),
-    ('color4', '#81A1C1'),
-    ('color5', '#B48EAD'),
-    ('color6', '#88C0D0'),
-    ('color7', '#E5E9F0'),
-    ('color8', '#4C566A'),
-    ('color9', '#BF616A'),
-    ('color10', '#A3BE8C'),
-    ('color11', '#EBCB8B'),
-    ('color12', '#81A1C1'),
-    ('color13', '#B48EAD'),
-    ('color14', '#8FBCBB'),
-    ('color15', '#ECEFF4')
-]))
-
-# Apply the theme
-nord_dark.apply()
-```
-
 
 ## Palette generation
 
@@ -123,3 +88,40 @@ from c_weave.generate import upscale
 
 wallpaper_upscaled = upscale(wallpaper)  # takes much longer than the initial generation
 ```
+
+
+## Scheme definition
+
+### Manually define a colorscheme
+```python
+from c_weave.theme import Scheme, Variant
+
+# Initialize an empty theme
+nord = Scheme(name='nord')
+# Create a variant
+nord_dark = nord.add_variant(
+  Variant(name='dark', colors = [
+    ('background', '#2E3440'),
+    ('foreground', '#D8DEE9'),
+    ('color0', '#3B4252'),
+    ('color1', '#BF616A'),
+    ('color2', '#A3BE8C'),
+    ('color3', '#EBCB8B'),
+    ('color4', '#81A1C1'),
+    ('color5', '#B48EAD'),
+    ('color6', '#88C0D0'),
+    ('color7', '#E5E9F0'),
+    ('color8', '#4C566A'),
+    ('color9', '#BF616A'),
+    ('color10', '#A3BE8C'),
+    ('color11', '#EBCB8B'),
+    ('color12', '#81A1C1'),
+    ('color13', '#B48EAD'),
+    ('color14', '#8FBCBB'),
+    ('color15', '#ECEFF4')
+]))
+
+# Apply the theme
+nord_dark.apply()
+```
+
