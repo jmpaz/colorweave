@@ -10,6 +10,7 @@
 from c_weave.utils.color import infer_palette, estimate_colors
 
 image_path = "data/samples/image.png"
+# image_path = "data/samples/fine_wind.jpg"
 
 colors = infer_palette(image_path, n=6)
 named_colors = estimate_colors(colors)
@@ -24,7 +25,7 @@ Create client
 ```python
 from c_weave.design import generate_palette
 
-output = generate_palette(colors, "haiku")
+output = generate_palette(colors, "sonnet")
 print(output)
 ```
 
@@ -38,6 +39,9 @@ from c_weave.utils.color import parse_output
 
 parsed_colors = parse_output(output)
 print(parsed_colors)
+
+# write to file # with open("data/samples/lush.txt", "w") as f:
+#   f.write(str(parsed_colors))
 
 ```
 
@@ -97,3 +101,18 @@ nord_dark = nord.add_variant(
 nord_dark.apply()
 ```
 
+### Apply Claude-generated colorscheme
+```python
+from c_weave.utils.color import parse_output, list_to_scheme
+from c_weave.theme import Scheme, Variant
+
+colors = list_to_scheme(parsed_colors)
+
+# load from file
+# colors = list_to_scheme(parse_output(open("data/samples/lush.txt").read()))
+
+lush = Scheme(name='lush')
+lush_dark = lush.add_variant(Variant(name='dark', colors=colors))
+lush_dark.apply()
+
+```

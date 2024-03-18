@@ -17,6 +17,15 @@ def parse_output(message: str):
     return re.findall(r"#[0-9a-fA-F]{6}", message)
 
 
+def list_to_scheme(colors: list):
+    """Prepare a color scheme from a list of hex codes (for use as a Variant)."""
+    colors = [
+        ("background", colors[0]),
+        ("foreground", colors[7]),
+    ] + [(f"color{i}", color) for i, color in enumerate(colors[:16])]
+    return colors
+
+
 def estimate_colors(hex_colors: list):
     """Estimate color names from hex codes with colormath and webcolors."""
 
