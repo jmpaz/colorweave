@@ -34,9 +34,15 @@ class Variant:
     def apply(self):
         pywal_scheme = {
             "special": {
-                "background": self.get_color("background"),
-                "foreground": self.get_color("foreground"),
-                "cursor": self.get_color("color1"),
+                "background": self.get_color("background")
+                if self.get_color("background")
+                else self.get_color("color0"),
+                "foreground": self.get_color("foreground")
+                if self.get_color("foreground")
+                else self.get_color("color7"),
+                "cursor": self.get_color("cursor")
+                if self.get_color("cursor")
+                else self.get_color("color7"),
             },
             "colors": {f"color{i}": self.get_color(f"color{i}") for i in range(16)},
         }

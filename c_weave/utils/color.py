@@ -19,11 +19,7 @@ def parse_output(message: str):
 
 def list_to_scheme(colors: list):
     """Prepare a color scheme from a list of hex codes (for use as a Variant)."""
-    colors = [
-        ("background", colors[0]),
-        ("foreground", colors[7]),
-    ] + [(f"color{i}", color) for i, color in enumerate(colors[:16])]
-    return colors
+    return [(f"color{i}", color) for i, color in enumerate(colors[:16])]
 
 
 def estimate_colors(hex_colors: list):
