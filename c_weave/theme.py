@@ -4,9 +4,12 @@ import tempfile
 
 
 class Scheme:
-    def __init__(self, name):
+    def __init__(self, name, variants=None):
         self.name = name
         self.variants = {}
+        if variants:
+            for variant in variants:
+                self.add_variant(variant)
 
     def add_variant(self, variant):
         self.variants[variant.name] = variant
