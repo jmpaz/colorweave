@@ -1,0 +1,75 @@
+```py
+# ruff: noqa: E402
+```
+
+### Define themes
+
+```python
+from c_weave.theme import Scheme, Variant
+
+rose_pine = Scheme(name='rose-pine', variants=[
+    Variant(name='base', colors=[
+        ('color0', '#191724'),
+        ('color1', '#eb6f92'),
+        ('color2', '#31748f'),
+        ('color3', '#f6c177'),
+        ('color4', '#9ccfd8'),
+        ('color5', '#c4a7e7'),
+        ('color6', '#ebbcba'),
+        ('color7', '#e0def4'),
+        ('color8', '#6e6a86'),
+        ('color9', '#eb6f92'),
+        ('color10', '#31748f'),
+        ('color11', '#f6c177'),
+        ('color12', '#9ccfd8'),
+        ('color13', '#c4a7e7'),
+        ('color14', '#ebbcba'),
+        ('color15', '#e0def4'),
+    ]),
+    Variant(name='moon', colors=[
+        ('color0', '#232136'),
+        ('color1', '#2a273f'),
+        ('color2', '#393552'),
+        ('color3', '#59546d'),
+        ('color4', '#817c9c'),
+        ('color5', '#e0def4'),
+        ('color6', '#f5f5f7'),
+        ('color7', '#d9d7e1'),
+        ('color8', '#eb6f92'),
+        ('color9', '#f6c177'),
+        ('color10', '#f6c177'),
+        ('color11', '#3e8fb0'),
+        ('color12', '#ea9a97'),
+        ('color13', '#9ccfd8'),
+        ('color14', '#c4a7e7'),
+        ('color15', '#b9b9bc'),
+    ]),
+    Variant(name='dawn', colors=[
+        ('color0', '#faf4ed'),
+        ('color1', '#1f1d2e'),
+        ('color2', '#d7827e'),
+        ('color3', '#ea9d34'),
+        ('color4', '#56949f'),
+        ('color5', '#907aa9'),
+        ('color6', '#286983'),
+        ('color7', '#575279'),
+        ('color8', '#9893a5'),
+        ('color9', '#1f1d2e'),
+        ('color10', '#d7827e'),
+        ('color11', '#ea9d34'),
+        ('color12', '#56949f'),
+        ('color13', '#907aa9'),
+        ('color14', '#286983'),
+        ('color15', '#26233a'),
+    ])
+])
+
+```
+
+
+```py
+rose_pine.variants['base'].apply()
+# rose_pine.variants['moon'].apply()  # contrast is off
+# rose_pine.variants['dawn'].apply()
+
+```
