@@ -1,0 +1,23 @@
+[project]
+name = "colorweave"
+version = "0.0.1"
+authors = [{ name = "jmpaz" }]
+requires-python = ">=3.8"
+dependencies = [
+    "comfy-bridge @ git+https://github.com/jmpaz/comfy-bridge.git",
+    "anthropic[bedrock]",
+]
+
+[project.urls]
+Homepage = "https://github.com/jmpaz/colorweave"
+
+[tool.setuptools]
+packages = ["c_weave"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
