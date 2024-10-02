@@ -5,8 +5,9 @@
 ### Define themes
 
 ```python
-from c_weave.theme import Scheme, Variant
+dark_mode = True
 
+from c_weave.theme import Scheme, Variant
 rose_pine = Scheme(name='rose-pine', variants=[
     Variant(name='base', colors=[
         ('color0', '#191724'),
@@ -64,12 +65,12 @@ rose_pine = Scheme(name='rose-pine', variants=[
     ])
 ])
 
-```
-
-
-```py
-rose_pine.variants['base'].apply()
+# rose_pine.variants['base'].apply()
 # rose_pine.variants['moon'].apply()  # contrast is off
 # rose_pine.variants['dawn'].apply()
 
+if dark_mode:
+    rose_pine.variants['base'].apply()
+else:
+    rose_pine.variants['dawn'].apply()
 ```
