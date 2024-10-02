@@ -6,7 +6,16 @@ requires-python = ">=3.8"
 dependencies = [
     "comfy-bridge @ git+https://github.com/jmpaz/comfy-bridge.git",
     "anthropic[bedrock]",
+    "rich>=13.9.1",
+    "click>=8.1.7",
+    "pillow>=10.4.0",
+    "webcolors>=24.8.0",
+    "colormath>=3.0.0",
+    "numpy>=1.24.4",
 ]
+
+[project.scripts]
+colorweave = "c_weave.cli:cli"
 
 [project.urls]
 Homepage = "https://github.com/jmpaz/colorweave"

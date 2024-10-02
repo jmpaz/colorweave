@@ -23,10 +23,11 @@ class Scheme:
 
 
 class Variant:
-    def __init__(self, name, colors):
+    def __init__(self, name, colors, type="dark"):
         super().__init__()
         self.name = name
         self.colors = dict(colors)
+        self.type = type
 
     def get_color(self, color_name):
         return self.colors.get(color_name, None)
