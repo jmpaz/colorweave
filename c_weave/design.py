@@ -1,5 +1,7 @@
 import os
+
 from anthropic import AnthropicBedrock
+
 from c_weave.utils.color import estimate_colors
 
 

@@ -1,15 +1,14 @@
-import webcolors
-from webcolors import hex_to_rgb
-from colormath.color_objects import sRGBColor, LabColor
-from colormath.color_conversions import convert_color
-from colormath.color_diff import delta_e_cie2000
-
+import random
+import re
 from collections import namedtuple
 from math import sqrt
-import random
-from PIL import Image
 
-import re
+import webcolors
+from colormath.color_conversions import convert_color
+from colormath.color_diff import delta_e_cie2000
+from colormath.color_objects import LabColor, sRGBColor
+from PIL import Image
+from webcolors import hex_to_rgb
 
 
 def parse_output(message: str):
@@ -135,10 +134,15 @@ def infer_palette(image_path, n=4):
     return [yuv_to_hex(yuv) for yuv in yuvs]
 
 
-# fmt: off
 # fix for python-colormath#104
-import numpy # noqa: E402
-def patch_asscalar(a):
-    return a.item()
-setattr(numpy, "asscalar", patch_asscalar)
+def patch_numpy_asscalar():
+    import numpy
+
+    def patch_asscalar(a):
+        return a.item()
+
+    setattr(numpy, "asscalar", patch_asscalar)
+
+
+patch_numpy_asscalar()
 # fmt: on

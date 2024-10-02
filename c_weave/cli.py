@@ -1,8 +1,10 @@
 import click
-from c_weave.generate import generate_wallpaper
-from c_weave.utils.color import infer_palette, estimate_colors, parse_output
+
 from c_weave.design import generate_palette
-from c_weave.theme import Scheme, Variant
+from c_weave.generate import generate_wallpaper
+from c_weave.utils.color import estimate_colors, infer_palette, parse_output
+
+# from c_weave.theme import Scheme, Variant
 
 
 @click.group()

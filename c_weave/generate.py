@@ -1,4 +1,6 @@
-from comfy_bridge.client import Generation, upscale as comfy_upscale
+
+from comfy_bridge.client import Generation
+from comfy_bridge.client import upscale as comfy_upscale
 
 
 def generate_wallpaper(colors: str):
