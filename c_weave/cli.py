@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+from typing import Optional, Tuple
 
 import click
 from rich import box
@@ -92,29 +93,32 @@ def get_contrasting_color(bg_color, colors):
     return best_color
 
 
+def parse_scheme_identifier(scheme_identifier: str) -> Tuple[str, Optional[str]]:
+    """Parse scheme identifier into scheme name/variant identifier."""
+    parts = scheme_identifier.split(":")
+    scheme_name = parts[0]
+    variant_identifier = parts[1] if len(parts) > 1 else None
+    return scheme_name, variant_identifier
+
+
 @scheme.command("show")
-@click.argument("scheme_name")
-@click.option("--variant", help="Specify a variant by name")
-@click.option(
-    "--type",
-    "variant_type",
-    type=click.Choice(["dark", "light"]),
-    help="Specify variant type",
-)
-def show_scheme(scheme_name, variant, variant_type):
-    """Display scheme details."""
+@click.argument("scheme_identifier")
+def show_scheme(scheme_identifier):
+    """Display scheme details. Identifier syntax: <scheme_name>:<variant_type|variant_name> (eg 'catppuccin:latte', 'rose-pine:dark')"""
+    scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
     scheme = load_scheme(scheme_name)
 
-    if variant:
-        if variant not in scheme.variants:
+    if variant_identifier:
+        if variant_identifier in scheme.variants:
+            variants_to_show = [scheme.variants[variant_identifier]]
+        elif variant_identifier in ["dark", "light"]:
+            variants_to_show = [
+                v for v in scheme.variants.values() if v.type == variant_identifier
+            ]
+        else:
             raise click.UsageError(
-                f"Variant '{variant}' not found in scheme '{scheme.name}'"
+                f"Variant '{variant_identifier}' not found in scheme '{scheme.name}'"
             )
-        variants_to_show = [scheme.variants[variant]]
-    elif variant_type:
-        variants_to_show = [
-            v for v in scheme.variants.values() if v.type == variant_type
-        ]
     else:
         variants_to_show = scheme.variants.values()
 
@@ -151,41 +155,6 @@ def import_scheme(file_path):
         json.dump(scheme_data, f, indent=2)
 
     click.echo(f"Imported scheme '{scheme_name}' successfully.")
-
-
-@cli.command()
-@click.argument("scheme_name")
-@click.option("--variant", help="Specify a variant by name")
-@click.option(
-    "--type",
-    "variant_type",
-    type=click.Choice(["dark", "light"]),
-    help="Specify variant type",
-)
-def apply(scheme_name, variant, variant_type):
-    """Apply a color scheme variant."""
-    scheme = load_scheme(scheme_name)
-
-    if variant:
-        if variant not in scheme.variants:
-            raise click.UsageError(
-                f"Variant '{variant}' not found in scheme '{scheme.name}'"
-            )
-        variant_to_apply = scheme.variants[variant]
-    elif variant_type:
-        variants = [v for v in scheme.variants.values() if v.type == variant_type]
-        if not variants:
-            raise click.UsageError(
-                f"No {variant_type} variant found in scheme '{scheme.name}'"
-            )
-        variant_to_apply = variants[0]
-    else:
-        variant_to_apply = next(iter(scheme.variants.values()))
-
-    variant_to_apply.apply()
-    click.echo(
-        f"Applied {scheme.name} - {variant_to_apply.name} ({variant_to_apply.type})"
-    )
 
 
 @cli.group()
@@ -347,6 +316,38 @@ def load_scheme(scheme_name):
             )
         )
     return scheme
+
+
+@scheme.command("apply")
+@click.argument("scheme_identifier")
+def set_scheme(scheme_identifier):
+    """Apply a color scheme variant. Identifier syntax: <scheme_name>:<variant_type|variant_name> (eg 'catppuccin:mocha', 'rose-pine:light')"""
+    scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
+    scheme = load_scheme(scheme_name)
+
+    if variant_identifier:
+        if variant_identifier in scheme.variants:
+            variant_to_apply = scheme.variants[variant_identifier]
+        elif variant_identifier in ["dark", "light"]:
+            variants = [
+                v for v in scheme.variants.values() if v.type == variant_identifier
+            ]
+            if not variants:
+                raise click.UsageError(
+                    f"No {variant_identifier} variant found in scheme '{scheme.name}'"
+                )
+            variant_to_apply = variants[0]
+        else:
+            raise click.UsageError(
+                f"Variant '{variant_identifier}' not found in scheme '{scheme.name}'"
+            )
+    else:
+        variant_to_apply = next(iter(scheme.variants.values()))
+
+    variant_to_apply.apply()
+    click.echo(
+        f"Applied {scheme.name} - {variant_to_apply.name} ({variant_to_apply.type})"
+    )
 
 
 if __name__ == "__main__":
