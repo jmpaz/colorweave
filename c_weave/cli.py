@@ -63,8 +63,17 @@ def list_schemes():
         table.add_column("variant", style="cyan")
         table.add_column("type")
 
-        for variant_name, variant in scheme.variants.items():
-            table.add_row(variant_name, variant.type)
+        sorted_variants = sort_variants_by_brightness(scheme.variants)
+
+        for variant_name, variant in sorted_variants:
+            bg_color = variant.get_color("background") or variant.get_color("color0")
+            fg_color = variant.get_color("foreground") or variant.get_color("color7")
+
+            variant_text = Text()
+            variant_text.append(variant_name, style=f"on {bg_color} {fg_color}")
+            variant_text.append(" ")
+
+            table.add_row(variant_text, variant.type)
 
         tables.append(table)
 
@@ -91,6 +100,14 @@ def get_contrasting_color(bg_color, colors):
                 best_color = color
 
     return best_color
+
+
+def sort_variants_by_brightness(variants):
+    def get_variant_brightness(variant):
+        bg_color = variant.get_color("background") or variant.get_color("color0")
+        return get_brightness(bg_color)
+
+    return sorted(variants.items(), key=lambda x: get_variant_brightness(x[1]))
 
 
 def parse_scheme_identifier(scheme_identifier: str) -> Tuple[str, Optional[str]]:
