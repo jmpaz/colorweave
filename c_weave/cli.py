@@ -3,8 +3,12 @@ import os
 import subprocess
 
 import click
+from rich import box
+from rich.color import Color
+from rich.columns import Columns
 from rich.console import Console
 from rich.table import Table
+from rich.text import Text
 
 from c_weave.design import generate_palette
 from c_weave.generate import generate_wallpaper
@@ -35,7 +39,6 @@ def ensure_directories():
 
 @click.group()
 def cli():
-    """CLI for managing color schemes and generating palettes."""
     ensure_directories()
 
 
@@ -52,13 +55,41 @@ def list_schemes():
         f.replace(".json", "") for f in os.listdir(SCHEMES_DIR) if f.endswith(".json")
     ]
 
-    table = Table(title="Color Schemes")
-    table.add_column("Scheme Name", style="cyan")
+    tables = []
+    for scheme_name in schemes:
+        scheme = load_scheme(scheme_name)
+        table = Table(title=scheme_name, box=box.ROUNDED)
+        table.add_column("variant", style="cyan")
+        table.add_column("type")
 
-    for scheme in schemes:
-        table.add_row(scheme)
+        for variant_name, variant in scheme.variants.items():
+            table.add_row(variant_name, variant.type)
 
-    console.print(table)
+        tables.append(table)
+
+    columns = Columns(tables, equal=True, expand=True)
+    console.print("", columns)
+
+
+def get_brightness(color):
+    r, g, b = Color.parse(color).get_truecolor()
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255
+
+
+def get_contrasting_color(bg_color, colors):
+    bg_brightness = get_brightness(bg_color)
+    max_contrast = 0
+    best_color = "color7"  # default to light gray if no good contrast found
+
+    for name, color in colors.items():
+        if name.startswith("color"):
+            fg_brightness = get_brightness(color)
+            contrast = abs(bg_brightness - fg_brightness)
+            if contrast > max_contrast:
+                max_contrast = contrast
+                best_color = color
+
+    return best_color
 
 
 @scheme.command("show")
@@ -87,16 +118,23 @@ def show_scheme(scheme_name, variant, variant_type):
     else:
         variants_to_show = scheme.variants.values()
 
+    tables = []
     for variant in variants_to_show:
-        table = Table(title=f"{scheme.name} - {variant.name} ({variant.type})")
-        table.add_column("Color Name", style="cyan")
-        table.add_column("Hex Value", style="magenta")
+        table = Table(
+            title=f"{variant.name} ({variant.type})", box=box.ROUNDED, show_header=False
+        )
+        table.add_column("color", style="bold")
+        table.add_column("hex", style="white")
 
         for color_name, color_value in variant.colors.items():
-            table.add_row(color_name, color_value)
+            fg_color = get_contrasting_color(color_value, variant.colors)
+            hex_text = Text(color_value, style=f"on {color_value} {fg_color}")
+            table.add_row(color_name, hex_text)
 
-        console.print(table)
-        console.print("\n")
+        tables.append(table)
+
+    columns = Columns(tables, equal=True, expand=True)
+    console.print("", columns)
 
 
 @scheme.command("import")
@@ -237,19 +275,15 @@ def list_wallpapers_cmd():
     """List all stored wallpapers."""
     wallpapers = list_wallpapers()
 
-    # Get unique keys
-    all_keys = set()
-    for wallpaper in wallpapers:
-        all_keys.update(wallpaper.keys())
-    sorted_keys = sorted(all_keys)
+    columns = ["id", "name", "type", "resolution", "filesize"]
 
-    table = Table(title="Wallpapers")
-    for key in sorted_keys:
-        table.add_column(key, no_wrap=True)
+    table = Table(show_header=True, box=box.ROUNDED)
+    for col in columns:
+        table.add_column(col, no_wrap=True)
 
     for wallpaper in wallpapers:
         row = []
-        for key in sorted_keys:
+        for key in columns:
             value = wallpaper.get(key, "")
             if key == "id":
                 value = value[:6]
@@ -274,9 +308,10 @@ def show_wallpaper(identifier, open):
         wallpaper = get_wallpaper(identifier) or fuzzy_match_wallpaper(identifier)
 
     if wallpaper:
-        table = Table(title=f"Wallpaper ({wallpaper['id'][:4]})")
-        table.add_column("key")
+        table = Table(box=box.ROUNDED, show_header=False)
+        table.add_column("key", style="bold")
         table.add_column("value")
+
         for key, value in wallpaper.items():
             if key == "id":
                 value = value
