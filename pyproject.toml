@@ -12,6 +12,8 @@ dependencies = [
     "webcolors>=24.8.0",
     "colormath>=3.0.0",
     "numpy>=1.24.4",
+    "fuzzywuzzy>=0.18.0",
+    "python-levenshtein>=0.25.1",
 ]
 
 [project.scripts]

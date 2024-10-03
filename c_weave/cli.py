@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 
 import click
 from rich.console import Console
@@ -8,24 +9,33 @@ from rich.table import Table
 from c_weave.design import generate_palette
 from c_weave.generate import generate_wallpaper
 from c_weave.theme import Scheme, Variant
-from c_weave.utils.color import estimate_colors, infer_palette, parse_output
+from c_weave.utils.color import estimate_colors, infer_palette
+from c_weave.wallpaper import (
+    fuzzy_match_wallpaper,
+    get_random_wallpaper,
+    get_wallpaper,
+    get_wallpaper_path,
+    import_wallpaper,
+    list_wallpapers,
+)
 
 console = Console()
 
 COLORWEAVE_DIR = os.path.expanduser("~/.local/share/colorweave")
 SCHEMES_DIR = os.path.join(COLORWEAVE_DIR, "schemes")
+WALLPAPER_DIR = os.path.join(COLORWEAVE_DIR, "wallpapers")
 
 
 def ensure_directories():
     """Ensure necessary directories exist."""
-    directories = [COLORWEAVE_DIR, SCHEMES_DIR]
+    directories = [COLORWEAVE_DIR, SCHEMES_DIR, WALLPAPER_DIR]
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
 
 
 @click.group()
 def cli():
-    """ColorWeave CLI for managing color schemes and generating palettes."""
+    """CLI for managing color schemes and generating palettes."""
     ensure_directories()
 
 
@@ -42,7 +52,7 @@ def list_schemes():
         f.replace(".json", "") for f in os.listdir(SCHEMES_DIR) if f.endswith(".json")
     ]
 
-    table = Table(title="Available Color Schemes")
+    table = Table(title="Color Schemes")
     table.add_column("Scheme Name", style="cyan")
 
     for scheme in schemes:
@@ -179,6 +189,109 @@ def generate_wallpaper_cmd(image_path):
         f.write(wallpaper)
 
     click.echo("Wallpaper generated successfully.")
+
+
+@cli.group()
+def wallpaper():
+    """Manage wallpapers."""
+    pass
+
+
+@wallpaper.command("import")
+@click.argument("path", type=click.Path(exists=True))
+@click.option("--name", help="Optional name for the wallpaper")
+@click.option(
+    "--type",
+    type=click.Choice(["dark", "light", "both"]),
+    required=True,
+    help="Wallpaper type",
+)
+def import_wallpaper_cmd(path, name, type):
+    """Import a new wallpaper."""
+    wallpaper_id = import_wallpaper(path, name, type)
+    click.echo(f"Imported wallpaper with ID: {wallpaper_id}")
+
+
+@wallpaper.command("apply")
+@click.argument("identifier", type=str)
+def apply_wallpaper(identifier):
+    """Apply a wallpaper by name or ID."""
+    if identifier in ["random", "dark", "light"]:
+        wallpaper = get_random_wallpaper(identifier if identifier != "random" else None)
+    else:
+        wallpaper = get_wallpaper(identifier) or fuzzy_match_wallpaper(identifier)
+
+    if wallpaper:
+        path = get_wallpaper_path(wallpaper)
+        # TODO: Implement apply_wallpaper
+        click.echo(f"Would apply wallpaper: {path}")
+        click.echo(
+            f"Wallpaper details: {wallpaper['name']} (ID: {wallpaper['id'][:6]})"
+        )
+    else:
+        click.echo("Wallpaper not found.")
+
+
+@wallpaper.command("list")
+def list_wallpapers_cmd():
+    """List all stored wallpapers."""
+    wallpapers = list_wallpapers()
+
+    # Get unique keys
+    all_keys = set()
+    for wallpaper in wallpapers:
+        all_keys.update(wallpaper.keys())
+    sorted_keys = sorted(all_keys)
+
+    table = Table(title="Wallpapers")
+    for key in sorted_keys:
+        table.add_column(key, no_wrap=True)
+
+    for wallpaper in wallpapers:
+        row = []
+        for key in sorted_keys:
+            value = wallpaper.get(key, "")
+            if key == "id":
+                value = value[:6]
+            elif key == "filesize":
+                value = f"{value / 1024 / 1024:.2f} MB"
+            row.append(str(value))
+        table.add_row(*row)
+
+    console.print(table)
+
+
+@wallpaper.command("show")
+@click.argument("identifier", type=str)
+@click.option(
+    "--open", is_flag=True, help="Open the wallpaper in the system image viewer"
+)
+def show_wallpaper(identifier, open):
+    """Show wallpaper details."""
+    if identifier in ["random", "dark", "light"]:
+        wallpaper = get_random_wallpaper(identifier if identifier != "random" else None)
+    else:
+        wallpaper = get_wallpaper(identifier) or fuzzy_match_wallpaper(identifier)
+
+    if wallpaper:
+        table = Table(title=f"Wallpaper ({wallpaper['id'][:4]})")
+        table.add_column("key")
+        table.add_column("value")
+        for key, value in wallpaper.items():
+            if key == "id":
+                value = value
+            elif key == "filesize":
+                value = f"{value / 1024 / 1024:.2f} MB"
+            table.add_row(key, str(value))
+
+        console.print(table)
+
+        if open:
+            path = get_wallpaper_path(wallpaper)
+            click.echo(f"Opening wallpaper: {path}")
+            subprocess.run(["xdg-open", path], check=True)
+    else:
+        click.echo("Wallpaper not found.")
 
 
 def load_scheme(scheme_name):
