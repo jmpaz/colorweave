@@ -191,8 +191,7 @@ def generate():
 def generate_palette_cmd(image_path, model):
     """Generate a color palette from an image."""
     colors = infer_palette(image_path, n=6)
-    named_colors = estimate_colors(colors)
-    palette_output = generate_palette(colors, named_colors, model)
+    palette_output = generate_palette(colors, model)
 
     with open("palette.txt", "w") as f:
         f.write(palette_output)
@@ -206,7 +205,7 @@ def generate_wallpaper_cmd(image_path):
     """Generate a wallpaper based on an image."""
     colors = infer_palette(image_path, n=6)
     named_colors = estimate_colors(colors)
-    colors_str = ", ".join(named_colors)
+    colors_str = ", ".join(str(color) for color in named_colors if color is not None)
     wallpaper = generate_wallpaper(colors_str)
 
     with open("wallpaper.png", "wb") as f:
