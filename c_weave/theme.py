@@ -1,6 +1,8 @@
 import json
 import subprocess
 import tempfile
+import platform
+import time
 
 
 class Scheme:
@@ -35,6 +37,18 @@ class Variant:
     def get_details(self):
         return {"Variant Name": self.name, "Colors": self.colors}
 
+    def _execute_wallust(self, tmp_path, flags=""):
+        command = f"wallust cs {tmp_path} --format pywal -d ~/.config/wallust {flags}"
+        try:
+            if platform.system() == "Darwin" and not flags:
+                process = subprocess.Popen(command, shell=True)
+                time.sleep(0.1)
+                process.terminate()
+            else:
+                subprocess.run(command, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error executing wallust: {e}")
+
     def apply(self):
         pywal_scheme = {
             "special": {
@@ -55,8 +69,8 @@ class Variant:
             json.dump(pywal_scheme, tmp)
             tmp_path = tmp.name
 
-        command = f"wallust cs {tmp_path} --format pywal"
-        try:
-            subprocess.run(command, check=True, shell=True)
-        except subprocess.CalledProcessError as e:
-            print(f"Error applying colorscheme: {e}")
+        if platform.system() == "Darwin":
+            self._execute_wallust(tmp_path, "-s")  # set terminal colors
+            self._execute_wallust(tmp_path)        # apply templates
+        else:
+            self._execute_wallust(tmp_path)
