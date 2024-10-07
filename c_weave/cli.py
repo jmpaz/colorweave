@@ -16,7 +16,12 @@ from c_weave.config import COLORWEAVE_DIR, SCHEMES_DIR, WALLPAPER_DIR
 from c_weave.design import generate_palette
 from c_weave.generate import generate_wallpaper
 from c_weave.scheme import analyze_scheme, load_scheme
-from c_weave.utils.color import estimate_colors, get_varying_colors, infer_palette
+from c_weave.utils.color import (
+    estimate_colors,
+    get_varying_colors,
+    infer_palette,
+    sort_colors,
+)
 from c_weave.wallpaper import (
     analyze_wallpaper,
     fuzzy_match_wallpaper,
@@ -316,6 +321,11 @@ def list_wallpapers_cmd():
             elif key == "colors":
                 if "colors" in wallpaper:
                     top_colors = get_varying_colors(wallpaper["colors"], n=3)
+                    # sort colors based on wallpaper type
+                    if wallpaper["type"] == "light":
+                        top_colors = sort_colors(top_colors, reverse=True)
+                    else:  # "dark" or "both"
+                        top_colors = sort_colors(top_colors)
                     color_text = Text()
                     for color in top_colors:
                         color_text.append("■ ", style=f"bold {color}")

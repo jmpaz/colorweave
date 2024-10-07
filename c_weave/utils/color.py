@@ -162,6 +162,35 @@ def get_varying_colors(colors: list, n: int = 3):
     return [convert_color(c, sRGBColor).get_rgb_hex() for c in selected]
 
 
+def get_brightness(color: str) -> float:
+    """Calculate the perceived brightness of a color."""
+    rgb = sRGBColor.new_from_rgb_hex(color)
+    return (rgb.rgb_r * 299 + rgb.rgb_g * 587 + rgb.rgb_b * 114) / 1000
+
+
+def sort_colors(
+    colors: list, method: str = "brightness", reverse: bool = False
+) -> list:
+    """
+    Sort colors based on the specified method.
+
+    :param colors: List of hex color strings
+    :param method: Sorting method ('brightness' or 'hue')
+    :param reverse: If True, sort in descending order
+    :return: Sorted list of hex color strings
+    """
+    if method == "brightness":
+        return sorted(colors, key=get_brightness, reverse=reverse)
+    elif method == "hue":
+        return sorted(
+            colors,
+            key=lambda c: convert_color(sRGBColor.new_from_rgb_hex(c), LabColor).lab_h,
+            reverse=reverse,
+        )
+    else:
+        raise ValueError("Invalid sorting method. Use 'brightness' or 'hue'.")
+
+
 # fix for python-colormath#104
 def patch_numpy_asscalar():
     import numpy
