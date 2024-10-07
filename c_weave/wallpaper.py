@@ -9,6 +9,8 @@ from typing import Dict, List, Optional
 from fuzzywuzzy import process as fuzzy_process
 from PIL import Image
 
+from c_weave.utils.color import infer_palette
+
 WALLPAPER_DIR = os.path.expanduser("~/.local/share/colorweave/wallpapers")
 
 
@@ -46,12 +48,38 @@ def import_wallpaper(path: str, name: Optional[str], type: str) -> str:
         "name_source": name_source,
         "resolution": f"{resolution[0]}x{resolution[1]}",
         "filesize": filesize,
+        "extension": ext,
     }
 
     with open(os.path.join(WALLPAPER_DIR, f"{wallpaper_id}.json"), "w") as f:
         json.dump(metadata, f, indent=2)
 
     return wallpaper_id
+
+
+def get_wallpaper_path(wallpaper: Dict) -> str:
+    return os.path.join(
+        WALLPAPER_DIR, f"{wallpaper['id']}.{wallpaper['extension'].lstrip('.')}"
+    )
+
+
+def analyze_wallpaper(wallpaper_id: str) -> List[str]:
+    """Analyze a wallpaper and extract colors."""
+    wallpaper = get_wallpaper(wallpaper_id) or fuzzy_match_wallpaper(wallpaper_id)
+    if not wallpaper:
+        raise ValueError(f"Wallpaper with ID {wallpaper_id} not found.")
+
+    full_id = wallpaper["id"]  # ensure full id
+    wallpaper_path = get_wallpaper_path(wallpaper)
+    colors = infer_palette(wallpaper_path, n=6)
+
+    # Update wallpaper metadata with colors
+    wallpaper["colors"] = colors
+    metadata_path = os.path.join(WALLPAPER_DIR, f"{full_id}.json")
+    with open(metadata_path, "w") as f:
+        json.dump(wallpaper, f, indent=2)
+
+    return colors
 
 
 def list_wallpapers() -> List[Dict]:
@@ -85,9 +113,3 @@ def fuzzy_match_wallpaper(query: str) -> Optional[Dict]:
     if matches and matches[0][1] > 70:  # 70% similarity threshold
         return next(w for w in wallpapers if w["name"] == matches[0][0])
     return None
-
-
-def get_wallpaper_path(wallpaper: Dict) -> str:
-    return os.path.join(
-        WALLPAPER_DIR, f"{wallpaper['id']}{Path(wallpaper['name']).suffix}"
-    )

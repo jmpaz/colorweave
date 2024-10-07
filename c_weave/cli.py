@@ -18,6 +18,7 @@ from c_weave.generate import generate_wallpaper
 from c_weave.scheme import analyze_scheme, load_scheme
 from c_weave.utils.color import estimate_colors, infer_palette
 from c_weave.wallpaper import (
+    analyze_wallpaper,
     fuzzy_match_wallpaper,
     get_random_wallpaper,
     get_wallpaper,
@@ -245,10 +246,30 @@ def wallpaper():
     required=True,
     help="Wallpaper type",
 )
-def import_wallpaper_cmd(path, name, type):
+@click.option(
+    "--analyze",
+    "-a",
+    is_flag=True,
+    help="Extract/record colors on import",
+)
+def import_wallpaper_cmd(path, name, type, analyze):
     """Import a new wallpaper."""
     wallpaper_id = import_wallpaper(path, name, type)
     click.echo(f"Imported wallpaper with ID: {wallpaper_id}")
+    if analyze:
+        colors = analyze_wallpaper(wallpaper_id)
+        click.echo(f"Analyzed wallpaper. Extracted colors: {colors}")
+
+
+@wallpaper.command("analyze")
+@click.argument("wallpaper_id")
+def analyze_existing_wallpaper(wallpaper_id):
+    """Extract colors from an existing wallpaper and store in metadata."""
+    try:
+        colors = analyze_wallpaper(wallpaper_id)
+        click.echo(f"Extracted colors for wallpaper {wallpaper_id}: {colors}")
+    except ValueError as e:
+        click.echo(f"Error: {str(e)}", err=True)
 
 
 @wallpaper.command("apply")
