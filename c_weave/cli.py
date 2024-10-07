@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 from typing import Optional, Tuple
 
 import click
@@ -324,7 +325,10 @@ def show_wallpaper(identifier, open):
         if open:
             path = get_wallpaper_path(wallpaper)
             click.echo(f"Opening wallpaper: {path}")
-            subprocess.run(["xdg-open", path], check=True)
+            if sys.platform == "darwin":
+                subprocess.run(["open", path], check=True)
+            else:
+                subprocess.run(["xdg-open", path], check=True)
     else:
         click.echo("Wallpaper not found.")
 
