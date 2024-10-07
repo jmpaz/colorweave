@@ -11,9 +11,10 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
+from c_weave.config import COLORWEAVE_DIR, SCHEMES_DIR, WALLPAPER_DIR
 from c_weave.design import generate_palette
 from c_weave.generate import generate_wallpaper
-from c_weave.theme import Scheme, Variant
+from c_weave.scheme import analyze_scheme, load_scheme
 from c_weave.utils.color import estimate_colors, infer_palette
 from c_weave.wallpaper import (
     fuzzy_match_wallpaper,
@@ -25,10 +26,6 @@ from c_weave.wallpaper import (
 )
 
 console = Console()
-
-COLORWEAVE_DIR = os.path.expanduser("~/.local/share/colorweave")
-SCHEMES_DIR = os.path.join(COLORWEAVE_DIR, "schemes")
-WALLPAPER_DIR = os.path.join(COLORWEAVE_DIR, "wallpapers")
 
 
 def ensure_directories():
@@ -121,7 +118,7 @@ def parse_scheme_identifier(scheme_identifier: str) -> Tuple[str, Optional[str]]
 @scheme.command("show")
 @click.argument("scheme_identifier")
 def show_scheme(scheme_identifier):
-    """Display scheme details. Identifier syntax: <scheme_name>:<variant_type|variant_name> (eg 'catppuccin:latte', 'rose-pine:dark')"""
+    """Preview all or a subset of a scheme's variants. Identifier syntax: <scheme_name>:<variant_type|variant_name> (eg 'catppuccin:latte', 'rose-pine:dark')"""
     scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
     scheme = load_scheme(scheme_name)
 
@@ -160,7 +157,13 @@ def show_scheme(scheme_identifier):
 
 @scheme.command("import")
 @click.argument("file_path", type=click.Path(exists=True))
-def import_scheme(file_path):
+@click.option(
+    "--analyze",
+    "-a",
+    is_flag=True,
+    help="Analyze the scheme and create a color profile",
+)
+def import_scheme(file_path, analyze):
     """Import a new scheme from a JSON file."""
     with open(file_path, "r") as f:
         scheme_data = json.load(f)
@@ -171,7 +174,19 @@ def import_scheme(file_path):
     with open(output_path, "w") as f:
         json.dump(scheme_data, f, indent=2)
 
+    if analyze:
+        analyze_scheme(scheme_name)
+        click.echo(f"Created color profile for scheme '{scheme_name}'")
+
     click.echo(f"Imported scheme '{scheme_name}' successfully.")
+
+
+@scheme.command("analyze")
+@click.argument("scheme_name")
+def analyze_existing_scheme(scheme_name):
+    """Analyze an existing scheme's variants to create a color profile."""
+    analyze_scheme(scheme_name)
+    click.echo(f"Created color profile for scheme '{scheme_name}'")
 
 
 @cli.group()
@@ -312,26 +327,6 @@ def show_wallpaper(identifier, open):
             subprocess.run(["xdg-open", path], check=True)
     else:
         click.echo("Wallpaper not found.")
-
-
-def load_scheme(scheme_name):
-    scheme_path = os.path.join(SCHEMES_DIR, f"{scheme_name}.json")
-    if not os.path.isfile(scheme_path):
-        raise click.FileError(f"Scheme file not found: {scheme_name}")
-
-    with open(scheme_path, "r") as f:
-        scheme_data = json.load(f)
-
-    scheme = Scheme(scheme_data["name"])
-    for variant_name, variant_data in scheme_data["variants"].items():
-        scheme.add_variant(
-            Variant(
-                name=variant_name,
-                colors=variant_data["colors"],
-                type=variant_data.get("type", "dark"),
-            )
-        )
-    return scheme
 
 
 @scheme.command("apply")
