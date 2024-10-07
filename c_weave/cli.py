@@ -16,7 +16,7 @@ from c_weave.config import COLORWEAVE_DIR, SCHEMES_DIR, WALLPAPER_DIR
 from c_weave.design import generate_palette
 from c_weave.generate import generate_wallpaper
 from c_weave.scheme import analyze_scheme, load_scheme
-from c_weave.utils.color import estimate_colors, infer_palette
+from c_weave.utils.color import estimate_colors, get_varying_colors, infer_palette
 from c_weave.wallpaper import (
     analyze_wallpaper,
     fuzzy_match_wallpaper,
@@ -297,21 +297,34 @@ def list_wallpapers_cmd():
     """List all stored wallpapers."""
     wallpapers = list_wallpapers()
 
-    columns = ["id", "name", "type", "resolution", "filesize"]
+    columns = ["id", "name", "type", "colors", "resolution", "filesize"]
 
     table = Table(show_header=True, box=box.ROUNDED)
     for col in columns:
-        table.add_column(col, no_wrap=True)
+        justify = "center" if col == "colors" else "left"
+        table.add_column(col, no_wrap=True, justify=justify)
 
     for wallpaper in wallpapers:
         row = []
         for key in columns:
-            value = wallpaper.get(key, "")
             if key == "id":
-                value = value[:6]
+                value = wallpaper["id"][:6]
+            elif key == "name":
+                value = wallpaper["name"][:20]
             elif key == "filesize":
-                value = f"{value / 1024 / 1024:.2f} MB"
-            row.append(str(value))
+                value = f"{wallpaper['filesize'] / 1024 / 1024:.2f} MB"
+            elif key == "colors":
+                if "colors" in wallpaper:
+                    top_colors = get_varying_colors(wallpaper["colors"], n=3)
+                    color_text = Text()
+                    for color in top_colors:
+                        color_text.append("■ ", style=f"bold {color}")
+                    value = color_text
+                else:
+                    value = "N/A"
+            else:
+                value = wallpaper.get(key, "")
+            row.append(value)
         table.add_row(*row)
 
     console.print(table)

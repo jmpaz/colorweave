@@ -134,6 +134,34 @@ def infer_palette(image_path, n=4):
     return [yuv_to_hex(yuv) for yuv in yuvs]
 
 
+def get_varying_colors(colors: list, n: int = 3):
+    """
+    Select the n most different colors from a list of hex colors.
+    """
+    if len(colors) <= n:
+        return colors
+
+    # Convert hex to Lab color space
+    lab_colors = [
+        convert_color(sRGBColor.new_from_rgb_hex(c), LabColor) for c in colors
+    ]
+
+    selected = [lab_colors[0]]
+    for _ in range(1, n):
+        max_diff = 0
+        max_color = None
+        for color in lab_colors:
+            if color not in selected:
+                min_diff = min(delta_e_cie2000(color, s) for s in selected)
+                if min_diff > max_diff:
+                    max_diff = min_diff
+                    max_color = color
+        selected.append(max_color)
+
+    # Convert back to hex
+    return [convert_color(c, sRGBColor).get_rgb_hex() for c in selected]
+
+
 # fix for python-colormath#104
 def patch_numpy_asscalar():
     import numpy
