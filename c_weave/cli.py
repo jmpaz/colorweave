@@ -42,6 +42,11 @@ def ensure_directories():
         os.makedirs(directory, exist_ok=True)
 
 
+def create_color_squares(colors):
+    """Create a string of colored squares for the given colors."""
+    return " ".join(f"[{color}]■[/]" for color in colors)
+
+
 @click.group()
 def cli():
     ensure_directories()
@@ -63,9 +68,9 @@ def list_schemes():
     tables = []
     for scheme_name in schemes:
         scheme = load_scheme(scheme_name)
-        table = Table(title=scheme_name, box=box.ROUNDED)
+        table = Table(title=scheme_name, box=box.ROUNDED, show_header=False)
         table.add_column("variant", style="cyan")
-        table.add_column("type")
+        table.add_column("accents")
 
         sorted_variants = sort_variants_by_brightness(scheme.variants)
 
@@ -77,7 +82,11 @@ def list_schemes():
             variant_text.append(variant_name, style=f"on {bg_color} {fg_color}")
             variant_text.append(" ")
 
-            table.add_row(variant_text, variant.type)
+            color_squares = create_color_squares(
+                [variant.get_color(f"color{i}") for i in range(1, 7)]
+            )
+
+            table.add_row(variant_text, color_squares)
 
         tables.append(table)
 
@@ -152,9 +161,9 @@ def show_scheme(scheme_identifier):
         table.add_column("hex", style="white")
 
         for color_name, color_value in variant.colors.items():
-            fg_color = get_contrasting_color(color_value, variant.colors)
-            hex_text = Text(color_value, style=f"on {color_value} {fg_color}")
-            table.add_row(color_name, hex_text)
+            color_square = create_color_squares([color_value])
+            hex_value = color_value[1:]
+            table.add_row(color_name, f"{color_square} {hex_value}")
 
         tables.append(table)
 
@@ -323,16 +332,13 @@ def list_wallpapers_cmd():
                 value = f"{wallpaper['filesize'] / 1024 / 1024:.2f} MB"
             elif key == "colors":
                 if "colors" in wallpaper:
-                    top_colors = get_varying_colors(wallpaper["colors"], n=3)
+                    top_colors = get_varying_colors(wallpaper["colors"], n=4)
                     # sort colors based on wallpaper type
                     if wallpaper["type"] == "light":
                         top_colors = sort_colors(top_colors, reverse=True)
                     else:  # "dark" or "both"
                         top_colors = sort_colors(top_colors)
-                    color_text = Text()
-                    for color in top_colors:
-                        color_text.append("■ ", style=f"bold {color}")
-                    value = color_text
+                    value = create_color_squares(top_colors)
                 else:
                     value = "N/A"
             else:
@@ -365,6 +371,12 @@ def show_wallpaper(identifier, open):
                 value = value
             elif key == "filesize":
                 value = f"{value / 1024 / 1024:.2f} MB"
+            elif key == "colors":
+                color_squares = []
+                for color in value:
+                    color_squares.append(f"[{color}]■[/] {color[1:]}")
+                value = "  ".join(color_squares)
+
             table.add_row(key, str(value))
 
         console.print(table)
