@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 from typing import Optional, Tuple
@@ -8,7 +9,7 @@ import click
 from rich import box
 from rich.color import Color
 from rich.columns import Columns
-from rich.console import Console
+from rich.console import Console, Group
 from rich.table import Table
 from rich.text import Text
 
@@ -25,6 +26,7 @@ from c_weave.utils.color import (
 from c_weave.wallpaper import (
     analyze_wallpaper,
     fuzzy_match_wallpaper,
+    get_compatible_wallpapers,
     get_random_wallpaper,
     get_wallpaper,
     get_wallpaper_path,
@@ -133,7 +135,12 @@ def parse_scheme_identifier(scheme_identifier: str) -> Tuple[str, Optional[str]]
 
 @scheme.command("show")
 @click.argument("scheme_identifier")
-def show_scheme(scheme_identifier):
+@click.option(
+    "--wallpapers",
+    is_flag=True,
+    help="Show compatible wallpapers, ranked by color similarity",
+)
+def show_scheme(scheme_identifier, wallpapers):
     """Preview all or a subset of a scheme's variants. Identifier syntax: <scheme_name>:<variant_type|variant_name> (eg 'catppuccin:latte', 'rose-pine:dark')"""
     scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
     scheme = load_scheme(scheme_name)
@@ -152,23 +159,65 @@ def show_scheme(scheme_identifier):
     else:
         variants_to_show = scheme.variants.values()
 
-    tables = []
-    for variant in variants_to_show:
-        table = Table(
-            title=f"{variant.name} ({variant.type})", box=box.ROUNDED, show_header=False
+    terminal_width = shutil.get_terminal_size().columns
+    stack_tables = terminal_width < 80 and wallpapers
+
+    if not wallpapers:
+        # side-by-side
+        variant_tables = [create_variant_table(variant) for variant in variants_to_show]
+        columns = Columns(variant_tables, equal=True, expand=True)
+        console.print(columns)
+    else:
+        for i, variant in enumerate(variants_to_show):
+            if i > 0:
+                console.print()
+
+            variant_table = create_variant_table(variant)
+            compatible_wallpapers = get_compatible_wallpapers(scheme, variant)
+            wallpaper_table = create_wallpaper_table(compatible_wallpapers)
+
+            if stack_tables:
+                console.print(Group(variant_table, wallpaper_table))
+            else:
+                combined_table = Table.grid(padding=1)
+                combined_table.add_row(variant_table, wallpaper_table)
+                console.print(combined_table)
+
+
+def create_variant_table(variant):
+    table = Table(
+        title=f"{variant.name} ({variant.type})", box=box.ROUNDED, show_header=False
+    )
+    table.add_column("color", style="bold")
+    table.add_column("hex")
+
+    for color_name, color_value in variant.colors.items():
+        color_square = create_color_squares([color_value])
+        hex_value = color_value[1:]
+        table.add_row(color_name, f"{color_square} {hex_value}")
+
+    return table
+
+
+def create_wallpaper_table(wallpapers):
+    table = Table(title=" wallpapers", box=box.ROUNDED, title_justify="left")
+    table.add_column("ID", style="dim")
+    table.add_column("Name")
+    table.add_column("Type", style="cyan")
+    table.add_column("Colors", justify="center")
+
+    for wallpaper in wallpapers[:8]:
+        color_squares = create_color_squares(
+            get_varying_colors(wallpaper["colors"], n=4)
         )
-        table.add_column("color", style="bold")
-        table.add_column("hex")
+        table.add_row(
+            wallpaper["id"][:6],
+            wallpaper["name"][:20],
+            wallpaper["type"],
+            color_squares,
+        )
 
-        for color_name, color_value in variant.colors.items():
-            color_square = create_color_squares([color_value])
-            hex_value = color_value[1:]
-            table.add_row(color_name, f"{color_square} {hex_value}")
-
-        tables.append(table)
-
-    columns = Columns(tables, equal=True, expand=True)
-    console.print("", columns)
+    return table
 
 
 @scheme.command("import")

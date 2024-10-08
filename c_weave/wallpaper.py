@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import random
 import shutil
@@ -10,7 +11,16 @@ from typing import Dict, List, Optional
 from fuzzywuzzy import process as fuzzy_process
 from PIL import Image
 
-from c_weave.utils.color import infer_palette
+from c_weave.scheme import Scheme, Variant
+from c_weave.utils.color import (
+    calculate_color_similarity,
+    get_varying_colors,
+    infer_palette,
+)
+
+# logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 WALLPAPER_DIR = os.path.expanduser("~/.local/share/colorweave/wallpapers")
 
@@ -133,3 +143,55 @@ def fuzzy_match_wallpaper(query: str) -> Optional[Dict]:
     if matches and matches[0][1] > 70:  # 70% similarity threshold
         return next(w for w in wallpapers if w["name"] == matches[0][0])
     return None
+
+
+def get_compatible_wallpapers(
+    scheme: Scheme, variant: Variant, p: Optional[float] = None
+) -> List[Dict]:
+    wallpapers = list_wallpapers()
+    logger.info(f"Total wallpapers: {len(wallpapers)}")
+
+    filtered_wallpapers = filter_wallpapers_by_type(wallpapers, variant.type)
+    logger.info(f"Wallpapers after type filtering: {len(filtered_wallpapers)}")
+
+    scheme_colors = [variant.get_color("background")] + [
+        variant.get_color(f"color{i}") for i in range(1, 7)
+    ]
+    logger.info(f"Scheme colors: {scheme_colors}")
+
+    ranked_wallpapers = rank_wallpapers_by_color_similarity(
+        filtered_wallpapers, scheme_colors, p
+    )
+    logger.info(f"Ranked wallpapers: {len(ranked_wallpapers)}")
+
+    return ranked_wallpapers
+
+
+def filter_wallpapers_by_type(wallpapers: List[Dict], target_type: str) -> List[Dict]:
+    return [w for w in wallpapers if w["type"] == target_type or w["type"] == "both"]
+
+
+def rank_wallpapers_by_color_similarity(
+    wallpapers: List[Dict], scheme_colors: List[str], p: Optional[float] = None
+) -> List[Dict]:
+    ranked_wallpapers = []
+    for wallpaper in wallpapers:
+        logger.info(f"Processing wallpaper: {wallpaper['name']}")
+        if "colors" not in wallpaper:
+            logger.warning(f"Wallpaper {wallpaper['name']} has no colors, skipping")
+            continue
+        wallpaper_colors = get_varying_colors(wallpaper["colors"], n=4)
+        logger.info(f"Wallpaper colors: {wallpaper_colors}")
+        similarity_score = calculate_color_similarity(wallpaper_colors, scheme_colors)
+        logger.info(f"Similarity score: {similarity_score}")
+        ranked_wallpapers.append((wallpaper, similarity_score))
+
+    ranked_wallpapers.sort(key=lambda x: x[1], reverse=True)
+
+    if p is not None:
+        top_n = max(1, int(len(ranked_wallpapers) * p))
+        logger.info(f"Selecting top {top_n} wallpapers")
+        return [w[0] for w in ranked_wallpapers[:top_n]]
+    else:
+        logger.info(f"Returning all {len(ranked_wallpapers)} ranked wallpapers")
+        return [w[0] for w in ranked_wallpapers]

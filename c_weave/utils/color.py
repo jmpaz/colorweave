@@ -2,6 +2,7 @@ import random
 import re
 from collections import namedtuple
 from math import sqrt
+from typing import List
 
 import webcolors
 from colormath.color_conversions import convert_color
@@ -134,10 +135,13 @@ def infer_palette(image_path, n=4):
     return [yuv_to_hex(yuv) for yuv in yuvs]
 
 
-def get_varying_colors(colors: list, n: int = 3):
+def get_varying_colors(colors: list, n: int = 3) -> List[str]:
     """
     Select the n most different colors from a list of hex colors.
     """
+    if not colors:
+        return []
+
     if len(colors) <= n:
         return colors
 
@@ -189,6 +193,20 @@ def sort_colors(
         )
     else:
         raise ValueError("Invalid sorting method. Use 'brightness' or 'hue'.")
+
+
+def calculate_color_similarity(colors1: List[str], colors2: List[str]) -> float:
+    total_similarity = 0
+    for c1 in colors1:
+        similarities = [
+            delta_e_cie2000(
+                convert_color(sRGBColor.new_from_rgb_hex(c1), LabColor),
+                convert_color(sRGBColor.new_from_rgb_hex(c2), LabColor),
+            )
+            for c2 in colors2
+        ]
+        total_similarity += min(similarities)
+    return -total_similarity
 
 
 # fix for python-colormath#104
