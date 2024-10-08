@@ -158,7 +158,7 @@ def show_scheme(scheme_identifier):
             title=f"{variant.name} ({variant.type})", box=box.ROUNDED, show_header=False
         )
         table.add_column("color", style="bold")
-        table.add_column("hex", style="white")
+        table.add_column("hex")
 
         for color_name, color_value in variant.colors.items():
             color_square = create_color_squares([color_value])
