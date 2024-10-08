@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import random
@@ -18,8 +19,26 @@ def ensure_wallpaper_dir():
     os.makedirs(WALLPAPER_DIR, exist_ok=True)
 
 
+def calculate_file_hash(file_path: str) -> str:
+    """Calculate SHA256 hash of a file."""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+
 def import_wallpaper(path: str, name: Optional[str], type: str) -> str:
     ensure_wallpaper_dir()
+
+    # check for duplicates
+    hash = calculate_file_hash(path)
+    existing_wallpapers = list_wallpapers()
+    for wallpaper in existing_wallpapers:
+        if wallpaper.get("hash") == hash:
+            raise ValueError(
+                f"This wallpaper already exists with ID: {wallpaper['id']}"
+            )
 
     wallpaper_id = str(uuid.uuid4())
     ext = Path(path).suffix
@@ -49,6 +68,7 @@ def import_wallpaper(path: str, name: Optional[str], type: str) -> str:
         "resolution": f"{resolution[0]}x{resolution[1]}",
         "filesize": filesize,
         "extension": ext,
+        "hash": hash,
     }
 
     with open(os.path.join(WALLPAPER_DIR, f"{wallpaper_id}.json"), "w") as f:

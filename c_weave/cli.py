@@ -259,11 +259,14 @@ def wallpaper():
 )
 def import_wallpaper_cmd(path, name, type, analyze):
     """Import a new wallpaper."""
-    wallpaper_id = import_wallpaper(path, name, type)
-    click.echo(f"Imported wallpaper with ID: {wallpaper_id}")
-    if analyze:
-        colors = analyze_wallpaper(wallpaper_id)
-        click.echo(f"Analyzed wallpaper. Extracted colors: {colors}")
+    try:
+        wallpaper_id = import_wallpaper(path, name, type)
+        click.echo(f"Imported wallpaper with ID: {wallpaper_id}")
+        if analyze:
+            colors = analyze_wallpaper(wallpaper_id)
+            click.echo(f"Analyzed wallpaper. Extracted colors: {colors}")
+    except ValueError as e:
+        click.echo(f"Error: {str(e)}", err=True)
 
 
 @wallpaper.command("analyze")
