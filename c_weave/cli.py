@@ -68,6 +68,7 @@ def list_schemes():
     ]
 
     tables = []
+    max_table_width = 0
     for scheme_name in schemes:
         scheme = load_scheme(scheme_name)
         table = Table(title=scheme_name, box=box.ROUNDED, show_header=False)
@@ -91,9 +92,38 @@ def list_schemes():
             table.add_row(variant_text, color_squares)
 
         tables.append(table)
+        max_table_width = max(max_table_width, len(scheme_name))
 
-    columns = Columns(tables, equal=True, expand=True)
-    console.print("", columns)
+    console.print()
+
+    terminal_width = shutil.get_terminal_size().columns
+    min_padding, desired_padding = 2, 10
+    column_width = max_table_width + 20
+
+    # determine number of columns
+    num_columns = 1
+    for cols in [3, 2]:
+        if (column_width + min_padding * 2) * cols <= terminal_width:
+            num_columns = cols
+            break
+
+    # calculate padding
+    total_table_width = column_width * num_columns
+    remaining_width = terminal_width - total_table_width
+    padding = min(
+        desired_padding, max(min_padding, remaining_width // (num_columns + 1))
+    )
+
+    # create the colorscheme table grid
+    grid = Table.grid(padding=(0, padding))
+
+    for i in range(0, len(tables), num_columns):
+        row = tables[i : i + num_columns]
+        grid.add_row(*row)
+        if i + num_columns < len(tables):
+            grid.add_row()
+
+    console.print(grid)
 
 
 def get_brightness(color):
@@ -161,6 +191,7 @@ def show_scheme(scheme_identifier, wallpapers):
 
     terminal_width = shutil.get_terminal_size().columns
     stack_tables = terminal_width < 80 and wallpapers
+    console.print()
 
     if not wallpapers:
         # side-by-side
