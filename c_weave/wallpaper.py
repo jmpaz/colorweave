@@ -112,6 +112,12 @@ def analyze_wallpaper(wallpaper_id: str) -> List[str]:
     return colors
 
 
+def get_wallpapers_without_colors():
+    """Return a list of wallpapers that don't have extracted colors."""
+    wallpapers = list_wallpapers()
+    return [w for w in wallpapers if "colors" not in w or not w["colors"]]
+
+
 def list_wallpapers() -> List[Dict]:
     ensure_wallpaper_dir()
     wallpapers = []

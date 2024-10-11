@@ -37,6 +37,18 @@ def analyze_scheme(scheme_name):
         json.dump(color_profile, f, indent=2)
 
 
+def get_schemes_without_profiles():
+    """Return a list of scheme names that don't have color profiles."""
+    all_schemes = [
+        f.replace(".json", "") for f in os.listdir(SCHEMES_DIR) if f.endswith(".json")
+    ]
+    profiles_dir = os.path.join(SCHEMES_DIR, "_profiles")
+    existing_profiles = [
+        f.replace(".json", "") for f in os.listdir(profiles_dir) if f.endswith(".json")
+    ]
+    return [scheme for scheme in all_schemes if scheme not in existing_profiles]
+
+
 def create_color_profile(scheme):
     profile = {
         "analysis_type": "base16",

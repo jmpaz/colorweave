@@ -16,7 +16,7 @@ from rich.text import Text
 from c_weave.config import COLORWEAVE_DIR, SCHEMES_DIR, WALLPAPER_DIR
 from c_weave.design import generate_palette
 from c_weave.generate import generate_wallpaper
-from c_weave.scheme import analyze_scheme, load_scheme
+from c_weave.scheme import analyze_scheme, get_schemes_without_profiles, load_scheme
 from c_weave.utils.color import (
     estimate_colors,
     get_varying_colors,
@@ -30,6 +30,7 @@ from c_weave.wallpaper import (
     get_random_wallpaper,
     get_wallpaper,
     get_wallpaper_path,
+    get_wallpapers_without_colors,
     import_wallpaper,
     list_wallpapers,
 )
@@ -278,11 +279,25 @@ def import_scheme(file_path, analyze):
 
 
 @scheme.command("analyze")
-@click.argument("scheme_name")
-def analyze_existing_scheme(scheme_name):
+@click.argument("scheme_name", required=False)
+@click.option(
+    "--missing", is_flag=True, help="Analyze all schemes without color profiles"
+)
+def analyze_existing_scheme(scheme_name, missing):
     """Analyze an existing scheme's variants to create a color profile."""
-    analyze_scheme(scheme_name)
-    click.echo(f"Created color profile for scheme '{scheme_name}'")
+    if missing:
+        schemes_to_analyze = get_schemes_without_profiles()
+        if not schemes_to_analyze:
+            click.echo("No schemes found without color profiles.")
+            return
+        for scheme in schemes_to_analyze:
+            analyze_scheme(scheme)
+            click.echo(f"Created color profile for scheme '{scheme}'")
+    elif scheme_name:
+        analyze_scheme(scheme_name)
+        click.echo(f"Created color profile for scheme '{scheme_name}'")
+    else:
+        click.echo("Please provide a scheme name or use --missing flag")
 
 
 @cli.group()
@@ -359,21 +374,36 @@ def import_wallpaper_cmd(path, name, type, analyze):
 
 
 @wallpaper.command("analyze")
-@click.argument("wallpaper_id")
-def analyze_existing_wallpaper(wallpaper_id):
-    """Extract colors from an existing wallpaper and store in metadata."""
-    try:
-        colors = analyze_wallpaper(wallpaper_id)
-        color_display = "  ".join(f"[{color}]■[/] {color[1:]}" for color in colors)
+@click.argument("wallpaper_id", required=False)
+@click.option(
+    "--missing", is_flag=True, help="Analyze all wallpapers without extracted colors"
+)
+def analyze_existing_wallpaper(wallpaper_id, missing):
+    """Extract colors from existing wallpapers and store in metadata."""
 
-        table = Table(show_header=False, box=box.ROUNDED)
-        table.add_column("Colors")
-        table.add_row(color_display)
+    def process_wallpaper(wallpaper_id: str):
+        try:
+            colors = analyze_wallpaper(wallpaper_id)
+            color_display = "  ".join(f"[{color}]■[/] {color[1:]}" for color in colors)
+            table = Table(show_header=False, box=box.ROUNDED)
+            table.add_column("Colors")
+            table.add_row(color_display)
+            click.echo(f"Extracted colors for wallpaper {wallpaper_id}:")
+            console.print(table)
+        except ValueError as e:
+            click.echo(f"Error analyzing wallpaper {wallpaper_id}: {str(e)}", err=True)
 
-        click.echo(f"Extracted colors for wallpaper {wallpaper_id}:")
-        console.print(table)
-    except ValueError as e:
-        click.echo(f"Error: {str(e)}", err=True)
+    if missing:
+        wallpapers_to_analyze = get_wallpapers_without_colors()
+        if not wallpapers_to_analyze:
+            click.echo("No unanalyzed wallpapers found.")
+            return
+        for wallpaper in wallpapers_to_analyze:
+            process_wallpaper(wallpaper["id"])
+    elif wallpaper_id:
+        process_wallpaper(wallpaper_id)
+    else:
+        click.echo("please provide a wallpaper id or use --missing flag")
 
 
 @wallpaper.command("apply")
