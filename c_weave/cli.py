@@ -364,7 +364,14 @@ def analyze_existing_wallpaper(wallpaper_id):
     """Extract colors from an existing wallpaper and store in metadata."""
     try:
         colors = analyze_wallpaper(wallpaper_id)
-        click.echo(f"Extracted colors for wallpaper {wallpaper_id}: {colors}")
+        color_display = "  ".join(f"[{color}]■[/] {color[1:]}" for color in colors)
+
+        table = Table(show_header=False, box=box.ROUNDED)
+        table.add_column("Colors")
+        table.add_row(color_display)
+
+        click.echo(f"Extracted colors for wallpaper {wallpaper_id}:")
+        console.print(table)
     except ValueError as e:
         click.echo(f"Error: {str(e)}", err=True)
 
