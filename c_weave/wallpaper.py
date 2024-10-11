@@ -1,16 +1,20 @@
 import hashlib
+import imghdr
 import json
 import logging
 import os
+import platform
 import random
 import shutil
+import subprocess
 import uuid
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from fuzzywuzzy import process as fuzzy_process
 from PIL import Image
 
+from c_weave.config import WALLPAPER_DIR
 from c_weave.scheme import Scheme, Variant
 from c_weave.utils.color import (
     calculate_color_similarity,
@@ -20,9 +24,6 @@ from c_weave.utils.color import (
 
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-WALLPAPER_DIR = os.path.expanduser("~/.local/share/colorweave/wallpapers")
 
 
 def ensure_wallpaper_dir():
@@ -198,6 +199,11 @@ def get_compatible_wallpapers(
     )
     logger.info(f"Ranked wallpapers: {len(ranked_wallpapers)}")
 
+    for wallpaper in ranked_wallpapers:
+        width, height = map(int, wallpaper["resolution"].split("x"))
+        wallpaper["width"] = width
+        wallpaper["height"] = height
+
     return ranked_wallpapers
 
 
@@ -229,3 +235,148 @@ def rank_wallpapers_by_color_similarity(
     else:
         logger.info(f"Returning all {len(ranked_wallpapers)} ranked wallpapers")
         return [w[0] for w in ranked_wallpapers]
+
+
+def get_displays() -> List[Dict[str, Union[str, int]]]:
+    """Return a list of dictionaries containing information about connected displays."""
+    system = platform.system()
+    displays = []
+
+    if system == "Darwin":  # macOS
+        output = subprocess.check_output(
+            ["system_profiler", "SPDisplaysDataType", "-json"]
+        ).decode()
+        data = json.loads(output)
+        for display in data["SPDisplaysDataType"][0]["spdisplays_ndrvs"]:
+            displays.append(
+                {
+                    "identifier": display.get(
+                        "spdisplays_device-id", str(len(displays))
+                    ),
+                    "resolution": f"{display['_spdisplays_pixels']}x{display['_spdisplays_resolution']}",
+                }
+            )
+    elif system == "Linux":
+        if os.environ.get("WAYLAND_DISPLAY"):  # Wayland
+            output = subprocess.check_output(["wlr-randr", "--json"]).decode()
+            data = json.loads(output)
+            for name, display in data.items():
+                if display["active"]:
+                    displays.append(
+                        {
+                            "identifier": name,
+                            "resolution": f"{display['width']}x{display['height']}",
+                        }
+                    )
+        else:  # X11
+            output = subprocess.check_output(["xrandr", "--current"]).decode()
+            for line in output.split("\n"):
+                if " connected" in line and "+" in line:  # Look for active displays
+                    parts = line.split()
+                    identifier = parts[0]
+                    # Find the resolution, which is typically in the format WIDTHxHEIGHT+X+Y
+                    resolution_part = next(p for p in parts if "x" in p and "+" in p)
+                    resolution = resolution_part.split("+")[
+                        0
+                    ]  # This removes the position information
+                    displays.append(
+                        {"identifier": identifier, "resolution": resolution}
+                    )
+
+    return displays
+
+
+def determine_wallpapers_to_set(
+    wallpapers: List[Dict],
+    displays: List[Dict],
+    use_random: bool = False,
+    filter_threshold: float = 0.2,
+) -> List[Dict[str, str]]:
+    """Determine which wallpapers to set for each display."""
+    result = []
+
+    for display in displays:
+        try:
+            display_width, display_height = map(int, display["resolution"].split("x"))
+
+            candidates = []
+            for wallpaper in wallpapers:
+                wallpaper_path = get_wallpaper_path(wallpaper)
+                if not is_image_file(wallpaper_path):
+                    logger.warning(f"Skipping non-image file: {wallpaper_path}")
+                    continue
+
+                if (
+                    wallpaper["width"] >= display_width
+                    and wallpaper["height"] >= display_height
+                ):
+                    candidates.append(wallpaper)
+
+            if use_random and candidates:
+                candidates = sorted(
+                    candidates, key=lambda w: w.get("similarity_score", 0), reverse=True
+                )
+                num_candidates = max(1, int(len(candidates) * filter_threshold))
+                selected_wallpaper = random.choice(candidates[:num_candidates])
+            elif candidates:
+                selected_wallpaper = candidates[0]
+            else:
+                selected_wallpaper = None
+
+            if selected_wallpaper:
+                result.append(
+                    {
+                        "display": display["identifier"],
+                        "wallpaper": get_wallpaper_path(selected_wallpaper),
+                    }
+                )
+            else:
+                logger.warning(
+                    f"No suitable wallpaper found for display {display['identifier']} ({display_width}x{display_height})"
+                )
+        except Exception as e:
+            logger.error(
+                f"Error processing display {display.get('identifier', 'unknown')}: {str(e)}"
+            )
+
+    return result
+
+
+def is_image_file(file_path):
+    return imghdr.what(file_path) is not None
+
+
+def set_wallpapers(wallpapers: List[Dict[str, str]]) -> str:
+    """Set wallpapers for all connected displays."""
+    try:
+        system = platform.system()
+
+        if system == "Darwin":  # macOS
+            for item in wallpapers:
+                subprocess.run(
+                    [
+                        "osascript",
+                        "-e",
+                        f'tell application "System Events" to set picture of desktop {item["display"]} to "{item["wallpaper"]}"',
+                    ]
+                )
+        elif system == "Linux":
+            if os.environ.get("WAYLAND_DISPLAY"):  # Wayland
+                for item in wallpapers:
+                    subprocess.Popen(
+                        ["swaybg", "-o", item["display"], "-i", item["wallpaper"]]
+                    )
+            else:  # X11
+                wallpaper_args = []
+                for item in wallpapers:
+                    wallpaper_args.extend(["--bg-fill", item["wallpaper"]])
+                if wallpaper_args:
+                    subprocess.run(["feh"] + wallpaper_args)
+                else:
+                    return "No valid wallpapers to set"
+        else:
+            return "Unsupported operating system"
+
+        return f"Successfully set wallpapers for {len(wallpapers)} displays"
+    except Exception as e:
+        raise RuntimeError(f"Failed to set wallpapers: {str(e)}")

@@ -25,14 +25,17 @@ from c_weave.utils.color import (
 )
 from c_weave.wallpaper import (
     analyze_wallpaper,
+    determine_wallpapers_to_set,
     fuzzy_match_wallpaper,
     get_compatible_wallpapers,
+    get_displays,
     get_random_wallpaper,
     get_wallpaper,
     get_wallpaper_path,
     get_wallpapers_missing_metadata,
     import_wallpaper,
     list_wallpapers,
+    set_wallpapers,
 )
 
 console = Console()
@@ -419,26 +422,6 @@ def analyze_existing_wallpaper(wallpaper_id, missing):
         click.echo("Please provide a wallpaper id or use --missing flag")
 
 
-@wallpaper.command("apply")
-@click.argument("identifier", type=str)
-def apply_wallpaper(identifier):
-    """Apply a wallpaper by name or ID."""
-    if identifier in ["random", "dark", "light"]:
-        wallpaper = get_random_wallpaper(identifier if identifier != "random" else None)
-    else:
-        wallpaper = get_wallpaper(identifier) or fuzzy_match_wallpaper(identifier)
-
-    if wallpaper:
-        path = get_wallpaper_path(wallpaper)
-        # TODO: Implement apply_wallpaper
-        click.echo(f"Would apply wallpaper: {path}")
-        click.echo(
-            f"Wallpaper details: {wallpaper['name']} (ID: {wallpaper['id'][:6]})"
-        )
-    else:
-        click.echo("Wallpaper not found.")
-
-
 @wallpaper.command("list")
 def list_wallpapers_cmd():
     """List all stored wallpapers."""
@@ -524,7 +507,21 @@ def show_wallpaper(identifier, open):
 
 @scheme.command("apply")
 @click.argument("scheme_identifier")
-def set_scheme(scheme_identifier):
+@click.option(
+    "--wallpapers",
+    "-w",
+    is_flag=True,
+    help="Set matching wallpapers for connected displays",
+)
+@click.option("--random", "-r", is_flag=True, help="Randomly select wallpapers")
+@click.option(
+    "--filter-threshold",
+    "-f",
+    type=float,
+    default=0.2,
+    help="Filter threshold for random selection",
+)
+def set_scheme(scheme_identifier, wallpapers, random, filter_threshold):
     """Apply a color scheme variant. Identifier syntax: <scheme_name>:<variant_type|variant_name> (eg 'catppuccin:mocha', 'rose-pine:light')"""
     scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
     scheme = load_scheme(scheme_name)
@@ -552,6 +549,23 @@ def set_scheme(scheme_identifier):
     click.echo(
         f"Applied {scheme.name} - {variant_to_apply.name} ({variant_to_apply.type})"
     )
+
+    if wallpapers:
+        try:
+            displays = get_displays()
+            compatible_wallpapers = get_compatible_wallpapers(
+                scheme, variant_to_apply, 1.0
+            )
+            wallpapers_to_set = determine_wallpapers_to_set(
+                compatible_wallpapers, displays, random, filter_threshold
+            )
+            if wallpapers_to_set:
+                result = set_wallpapers(wallpapers_to_set)
+                click.echo(result)
+            else:
+                click.echo("No suitable wallpapers found for any display")
+        except Exception as e:
+            click.echo(f"Error setting wallpapers: {str(e)}", err=True)
 
 
 if __name__ == "__main__":
