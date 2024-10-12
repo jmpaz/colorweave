@@ -30,7 +30,7 @@ from c_weave.wallpaper import (
     get_random_wallpaper,
     get_wallpaper,
     get_wallpaper_path,
-    get_wallpapers_without_colors,
+    get_wallpapers_missing_metadata,
     import_wallpaper,
     list_wallpapers,
 )
@@ -379,31 +379,44 @@ def import_wallpaper_cmd(path, name, type, analyze):
     "--missing", is_flag=True, help="Analyze all wallpapers without extracted colors"
 )
 def analyze_existing_wallpaper(wallpaper_id, missing):
-    """Extract colors from existing wallpapers and store in metadata."""
+    """Extract colors and calculate orientation (as needed) for existing wallpapers."""
 
     def process_wallpaper(wallpaper_id: str):
         try:
+            wallpaper = get_wallpaper(wallpaper_id)
+            if not wallpaper:
+                click.echo(
+                    f"Error: Wallpaper not found for provided ID {wallpaper_id}",
+                    err=True,
+                )
+                return
+
             colors = analyze_wallpaper(wallpaper_id)
+            wallpaper = get_wallpaper(wallpaper_id)
+
             color_display = "  ".join(f"[{color}]■[/] {color[1:]}" for color in colors)
             table = Table(show_header=False, box=box.ROUNDED)
             table.add_column("Colors")
-            table.add_row(color_display)
-            click.echo(f"Extracted colors for wallpaper {wallpaper_id}:")
+            table.add_column("Orientation")
+            table.add_row(color_display, wallpaper.get("orientation", "N/A"))
+            click.echo(f"Analyzed wallpaper {wallpaper_id}:")
             console.print(table)
         except ValueError as e:
             click.echo(f"Error analyzing wallpaper {wallpaper_id}: {str(e)}", err=True)
 
     if missing:
-        wallpapers_to_analyze = get_wallpapers_without_colors()
+        wallpapers_to_analyze = get_wallpapers_missing_metadata()
         if not wallpapers_to_analyze:
             click.echo("No unanalyzed wallpapers found.")
             return
-        for wallpaper in wallpapers_to_analyze:
+        for i, wallpaper in enumerate(wallpapers_to_analyze):
             process_wallpaper(wallpaper["id"])
+            if i < len(wallpapers_to_analyze) - 1:
+                click.echo()
     elif wallpaper_id:
         process_wallpaper(wallpaper_id)
     else:
-        click.echo("please provide a wallpaper id or use --missing flag")
+        click.echo("Please provide a wallpaper id or use --missing flag")
 
 
 @wallpaper.command("apply")
@@ -431,7 +444,7 @@ def list_wallpapers_cmd():
     """List all stored wallpapers."""
     wallpapers = list_wallpapers()
 
-    columns = ["id", "name", "type", "colors", "resolution", "filesize"]
+    columns = ["id", "name", "type", "colors", "resolution", "orientation", "filesize"]
 
     table = Table(show_header=True, box=box.ROUNDED)
     for col in columns:
@@ -459,7 +472,7 @@ def list_wallpapers_cmd():
                 else:
                     value = "N/A"
             else:
-                value = wallpaper.get(key, "")
+                value = wallpaper.get(key, "N/A")
             row.append(value)
         table.add_row(*row)
 

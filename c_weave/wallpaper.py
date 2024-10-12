@@ -60,7 +60,14 @@ def import_wallpaper(path: str, name: Optional[str], type: str) -> str:
 
     # get metadata
     with Image.open(new_path) as img:
-        resolution = img.size
+        width, height = img.size
+        resolution = f"{width}x{height}"
+        if width == height:
+            orientation = "both"
+        elif width > height:
+            orientation = "landscape"
+        else:
+            orientation = "portrait"
     filesize = os.path.getsize(new_path)
 
     # create metadata
@@ -75,7 +82,8 @@ def import_wallpaper(path: str, name: Optional[str], type: str) -> str:
         "name": name,
         "type": type,
         "name_source": name_source,
-        "resolution": f"{resolution[0]}x{resolution[1]}",
+        "resolution": resolution,
+        "orientation": orientation,
         "filesize": filesize,
         "extension": ext,
         "hash": hash,
@@ -94,17 +102,33 @@ def get_wallpaper_path(wallpaper: Dict) -> str:
 
 
 def analyze_wallpaper(wallpaper_id: str) -> List[str]:
-    """Analyze a wallpaper and extract colors."""
-    wallpaper = get_wallpaper(wallpaper_id) or fuzzy_match_wallpaper(wallpaper_id)
+    """Analyze a wallpaper and extract colors and orientation."""
+    wallpaper = get_wallpaper(wallpaper_id)
     if not wallpaper:
         raise ValueError(f"Wallpaper with ID {wallpaper_id} not found.")
 
-    full_id = wallpaper["id"]  # ensure full id
+    full_id = wallpaper["id"]
     wallpaper_path = get_wallpaper_path(wallpaper)
-    colors = infer_palette(wallpaper_path, n=6)
 
-    # Update wallpaper metadata with colors
-    wallpaper["colors"] = colors
+    # extract colors if not present
+    if "colors" not in wallpaper:
+        colors = infer_palette(wallpaper_path, n=6)
+        wallpaper["colors"] = colors
+    else:
+        colors = wallpaper["colors"]
+
+    # calculate orientation if not present
+    if "orientation" not in wallpaper or wallpaper["orientation"] == "N/A":
+        width, height = map(int, wallpaper["resolution"].split("x"))
+        if abs(width - height) <= min(width, height) * 0.05:
+            orientation = "both"  # within 5% of square
+        elif width > height:
+            orientation = "landscape"
+        else:
+            orientation = "portrait"
+        wallpaper["orientation"] = orientation
+
+    # Update wallpaper metadata
     metadata_path = os.path.join(WALLPAPER_DIR, f"{full_id}.json")
     with open(metadata_path, "w") as f:
         json.dump(wallpaper, f, indent=2)
@@ -112,10 +136,14 @@ def analyze_wallpaper(wallpaper_id: str) -> List[str]:
     return colors
 
 
-def get_wallpapers_without_colors():
-    """Return a list of wallpapers that don't have extracted colors."""
+def get_wallpapers_missing_metadata():
+    """Return a list of wallpapers that don't have extracted colors or orientation."""
     wallpapers = list_wallpapers()
-    return [w for w in wallpapers if "colors" not in w or not w["colors"]]
+    return [
+        w
+        for w in wallpapers
+        if "colors" not in w or "orientation" not in w or w.get("orientation") == "N/A"
+    ]
 
 
 def list_wallpapers() -> List[Dict]:
