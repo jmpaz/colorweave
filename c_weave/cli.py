@@ -592,7 +592,6 @@ def set_scheme(scheme_identifier, wallpapers, random, filter_threshold):
             click.echo(f"Error setting wallpapers: {str(e)}", err=True)
     else:
         # If no wallpapers are set, just display the variant table
-        click.echo(success_message)
         console.print()
         console.print(variant_table)
 

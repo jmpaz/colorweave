@@ -326,14 +326,16 @@ def get_displays() -> List[Dict[str, Union[str, int]]]:
         ).decode()
         data = json.loads(output)
         for display in data["SPDisplaysDataType"][0]["spdisplays_ndrvs"]:
-            displays.append(
-                {
-                    "identifier": display.get(
-                        "spdisplays_device-id", str(len(displays))
-                    ),
-                    "resolution": f"{display['_spdisplays_pixels']}x{display['_spdisplays_resolution']}",
-                }
-            )
+            resolution = display.get("_spdisplays_pixels")
+            if resolution:
+                displays.append(
+                    {
+                        "identifier": display.get(
+                            "spdisplays_device-id", str(len(displays))
+                        ),
+                        "resolution": resolution,
+                    }
+                )
     elif system == "Linux":
         if os.environ.get("WAYLAND_DISPLAY"):  # Wayland
             output = subprocess.check_output(["wlr-randr", "--json"]).decode()
