@@ -219,10 +219,9 @@ def show_scheme(scheme_identifier, wallpapers):
                 console.print(combined_table)
 
 
-def create_variant_table(variant):
-    table = Table(
-        title=f"{variant.name} ({variant.type})", box=box.ROUNDED, show_header=False
-    )
+def create_variant_table(variant, show_title=True):
+    title = f"{variant.name} ({variant.type})" if show_title else ""
+    table = Table(title=title, box=box.ROUNDED, show_header=False)
     table.add_column("color", style="bold")
     table.add_column("hex")
 
@@ -234,8 +233,10 @@ def create_variant_table(variant):
     return table
 
 
-def create_wallpaper_table(wallpapers):
-    table = Table(title=" wallpapers", box=box.ROUNDED, title_justify="left")
+def create_wallpaper_table(wallpapers, show_title=True):
+    table = Table(
+        title=" wallpapers" if show_title else "", box=box.ROUNDED, title_justify="left"
+    )
     table.add_column("ID", style="dim")
     table.add_column("Name")
     table.add_column("Type", style="cyan")
@@ -546,9 +547,12 @@ def set_scheme(scheme_identifier, wallpapers, random, filter_threshold):
         variant_to_apply = next(iter(scheme.variants.values()))
 
     variant_to_apply.apply()
-    click.echo(
+    console.print()
+    console.print(
         f"Applied {scheme.name} - {variant_to_apply.name} ({variant_to_apply.type})"
     )
+
+    variant_table = create_variant_table(variant_to_apply, show_title=False)
 
     if wallpapers:
         try:
@@ -560,12 +564,37 @@ def set_scheme(scheme_identifier, wallpapers, random, filter_threshold):
                 compatible_wallpapers, displays, random, filter_threshold
             )
             if wallpapers_to_set:
-                result = set_wallpapers(wallpapers_to_set)
-                click.echo(result)
+                set_wallpapers(wallpapers_to_set)
+
+                # Get set wallpaper information
+                set_wallpaper_list = []
+                for wallpaper_info in wallpapers_to_set:
+                    wallpaper_id = os.path.basename(wallpaper_info["wallpaper"]).split(
+                        "."
+                    )[0]
+                    wallpaper = get_wallpaper(wallpaper_id)
+                    if wallpaper:
+                        set_wallpaper_list.append(wallpaper)
+
+                if set_wallpaper_list:
+                    wallpaper_table = create_wallpaper_table(
+                        set_wallpaper_list, show_title=False
+                    )
+
+                    grid = Table.grid(padding=1)
+                    grid.add_row(variant_table, wallpaper_table)
+                    console.print(grid)
+                else:
+                    click.echo("No wallpaper information available for display")
             else:
                 click.echo("No suitable wallpapers found for any display")
         except Exception as e:
             click.echo(f"Error setting wallpapers: {str(e)}", err=True)
+    else:
+        # If no wallpapers are set, just display the variant table
+        click.echo(success_message)
+        console.print()
+        console.print(variant_table)
 
 
 if __name__ == "__main__":

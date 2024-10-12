@@ -1,7 +1,7 @@
 import json
+import platform
 import subprocess
 import tempfile
-import platform
 import time
 
 
@@ -70,7 +70,7 @@ class Variant:
             tmp_path = tmp.name
 
         if platform.system() == "Darwin":
-            self._execute_wallust(tmp_path, "-sq")  # set terminal colors
-            self._execute_wallust(tmp_path)         # apply templates
+            self._execute_wallust(tmp_path, "-sq")
+            self._execute_wallust(tmp_path, "-q")
         else:
-            self._execute_wallust(tmp_path)
+            self._execute_wallust(tmp_path, "-q")
