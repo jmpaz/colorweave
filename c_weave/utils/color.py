@@ -82,7 +82,10 @@ def infer_palette(image_path, n=4):
         points = []
         w, h = img.size
         for count, color in img.getcolors(w * h):
-            yuv = rgb_to_yuv(color[:3])
+            if isinstance(color, int):  # Grayscale
+                yuv = (color, 0, 0)
+            else:  # RGB
+                yuv = rgb_to_yuv(color[:3])
             points.append(Point(yuv, 3, count))
         return points
 
@@ -106,6 +109,7 @@ def infer_palette(image_path, n=4):
 
             for p in points:
                 smallest_distance = float("Inf")
+                idx = 0
                 for i in range(k):
                     distance = euclidean(p, clusters[i].center)
                     if distance < smallest_distance:
@@ -130,6 +134,12 @@ def infer_palette(image_path, n=4):
     img.thumbnail((200, 200))
 
     points = get_points(img)
+
+    unique_colors = len(set(p.coords for p in points))
+    if unique_colors < n:
+        # return available colors
+        return [yuv_to_hex(p.coords) for p in points[:n]]
+
     clusters = kmeans(points, n, 1)
     yuvs = [c.center.coords for c in clusters]
     return [yuv_to_hex(yuv) for yuv in yuvs]
