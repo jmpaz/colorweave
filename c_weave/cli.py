@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -23,6 +24,7 @@ from c_weave.utils.color import (
     infer_palette,
     sort_colors,
 )
+from c_weave.utils.logging import configure_logging, get_logger
 from c_weave.wallpaper import (
     analyze_wallpaper,
     determine_wallpapers_to_set,
@@ -40,6 +42,8 @@ from c_weave.wallpaper import (
 
 console = Console()
 
+logger = get_logger(__name__)
+
 
 def ensure_directories():
     """Ensure necessary directories exist."""
@@ -54,8 +58,25 @@ def create_color_squares(colors):
 
 
 @click.group()
-def cli():
+@click.option(
+    "--debug",
+    "-D",
+    "logging_level",
+    type=click.IntRange(0, 2),
+    default=0,
+    help="Set logging level: 0=WARNING (default), 1=INFO, 2=DEBUG",
+)
+@click.pass_context
+def cli(ctx, logging_level):
     ensure_directories()
+
+    configure_logging(logging_level)
+
+    if logging_level > 0:
+        click.echo(f"Logging level: {['WARNING', 'INFO', 'DEBUG'][logging_level]}")
+
+    ctx.ensure_object(dict)
+    ctx.obj["DEBUG"] = logging_level
 
 
 @cli.group()

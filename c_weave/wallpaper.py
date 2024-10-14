@@ -1,7 +1,6 @@
 import hashlib
 import imghdr
 import json
-import logging
 import os
 import platform
 import random
@@ -23,9 +22,9 @@ from c_weave.utils.color import (
     get_varying_colors,
     infer_palette,
 )
+from c_weave.utils.logging import get_logger
 
-# logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def ensure_wallpaper_dir():
@@ -392,6 +391,12 @@ def determine_wallpapers_to_set(
                 ):
                     candidates.append(wallpaper)
 
+            logger.debug(f"Candidate wallpapers for display {display['identifier']}:")
+            for candidate in candidates:
+                logger.debug(
+                    f"  {candidate['id'][:8]} ({candidate['width']}x{candidate['height']})"
+                )
+
             if use_random and candidates:
                 candidates = sorted(
                     candidates, key=lambda w: w.get("similarity_score", 0), reverse=True
@@ -409,6 +414,9 @@ def determine_wallpapers_to_set(
                         "display": display["identifier"],
                         "wallpaper": get_wallpaper_path(selected_wallpaper),
                     }
+                )
+                logger.info(
+                    f"Selected wallpaper for display {display['identifier']}: {get_wallpaper_path(selected_wallpaper)}"
                 )
             else:
                 logger.warning(
