@@ -2,7 +2,7 @@
 name = "colorweave"
 version = "0.0.1"
 authors = [{ name = "jmpaz" }]
-requires-python = ">=3.8"
+requires-python = "==3.11.*"
 dependencies = [
     "comfy-bridge @ git+https://github.com/jmpaz/comfy-bridge.git",
     "anthropic[bedrock]",
