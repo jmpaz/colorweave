@@ -23,12 +23,8 @@ colorweave = "c_weave.cli:cli"
 Homepage = "https://github.com/jmpaz/colorweave"
 
 [tool.setuptools]
-packages = ["c_weave"]
+packages = { find = {} }
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
-
-[tool.pyright]
-venvPath = "."
-venv = ".venv"
