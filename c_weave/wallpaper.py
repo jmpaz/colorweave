@@ -339,14 +339,22 @@ def get_displays() -> List[Dict[str, Union[str, int]]]:
         if os.environ.get("WAYLAND_DISPLAY"):  # Wayland
             output = subprocess.check_output(["wlr-randr", "--json"]).decode()
             data = json.loads(output)
-            for name, display in data.items():
-                if display["active"]:
-                    displays.append(
-                        {
-                            "identifier": name,
-                            "resolution": f"{display['width']}x{display['height']}",
-                        }
+            for display in data:
+                if display.get("enabled", False):
+                    # Find the current mode
+                    current_mode = next(
+                        (m for m in display["modes"] if m.get("current")), None
                     )
+                    if current_mode:
+                        width = current_mode["width"]
+                        height = current_mode["height"]
+                        displays.append(
+                            {
+                                "identifier": display["name"],
+                                "resolution": f"{width}x{height}",
+                            }
+                        )
+
         else:  # X11
             output = subprocess.check_output(["xrandr", "--current"]).decode()
             for line in output.split("\n"):
