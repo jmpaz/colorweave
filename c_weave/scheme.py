@@ -1,7 +1,7 @@
 import json
 import os
 
-from c_weave.theme import Scheme, Variant
+from c_weave.models import Scheme, Variant
 
 from .config import SCHEMES_DIR
 
