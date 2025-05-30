@@ -1,9 +1,5 @@
 import click
 
-from c_weave.design import generate_palette
-from c_weave.generate import generate_wallpaper
-from c_weave.utils.color import estimate_colors, infer_palette
-
 
 @click.group()
 def generate():
@@ -19,6 +15,9 @@ def generate():
     help="Claude model to use for palette generation",
 )
 def generate_palette_cmd(image_path, model):
+    from c_weave.design import generate_palette
+    from c_weave.utils.color import infer_palette
+
     colors = infer_palette(image_path, n=6)
     palette_output = generate_palette(colors, model)
 
@@ -31,6 +30,9 @@ def generate_palette_cmd(image_path, model):
 @generate.command("wallpaper")
 @click.argument("image_path", type=click.Path(exists=True))
 def generate_wallpaper_cmd(image_path):
+    from c_weave.generate import generate_wallpaper
+    from c_weave.utils.color import estimate_colors, infer_palette
+
     colors = infer_palette(image_path, n=6)
     named_colors = estimate_colors(colors)
     colors_str = ", ".join(str(color) for color in named_colors if color is not None)
@@ -40,4 +42,3 @@ def generate_wallpaper_cmd(image_path):
         f.write(wallpaper)
 
     click.echo("Wallpaper generated successfully.")
-

@@ -22,13 +22,6 @@ from c_weave.utils.cli import (
     create_variant_table,
     create_wallpaper_table,
 )
-from c_weave.wallpaper import (
-    determine_wallpapers_to_set,
-    get_compatible_wallpapers,
-    get_displays,
-    get_wallpaper,
-    set_wallpapers,
-)
 
 console = Console()
 
@@ -175,6 +168,8 @@ def show_scheme(scheme_identifier, wallpapers):
                 console.print()
 
             variant_table = create_variant_table(variant)
+            from c_weave.wallpaper import get_compatible_wallpapers
+
             compatible_wallpapers = get_compatible_wallpapers(scheme, variant)
             wallpaper_table = create_wallpaper_table(compatible_wallpapers)
 
@@ -281,6 +276,14 @@ def set_scheme(scheme_identifier, wallpapers, random, filter_threshold):
 
     if wallpapers:
         try:
+            from c_weave.wallpaper import (
+                determine_wallpapers_to_set,
+                get_compatible_wallpapers,
+                get_displays,
+                get_wallpaper,
+                set_wallpapers,
+            )
+
             displays = get_displays()
             compatible_wallpapers = get_compatible_wallpapers(
                 scheme, variant_to_apply, 1.0

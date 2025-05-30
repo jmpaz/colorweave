@@ -1,7 +1,5 @@
-import os
 import subprocess
 import sys
-from typing import Optional
 
 import click
 from rich import box
@@ -9,17 +7,6 @@ from rich.console import Console
 from rich.table import Table
 
 from c_weave.utils.cli import create_color_squares
-from c_weave.utils.color import get_varying_colors, sort_colors
-from c_weave.wallpaper import (
-    analyze_wallpaper,
-    fuzzy_match_wallpaper,
-    get_random_wallpaper,
-    get_wallpaper,
-    get_wallpaper_path,
-    get_wallpapers_missing_metadata,
-    import_wallpaper,
-    list_wallpapers,
-)
 
 console = Console()
 
@@ -40,6 +27,8 @@ def wallpaper():
 )
 @click.option("--analyze", "-a", is_flag=True, help="Extract/record colors on import")
 def import_wallpaper_cmd(path, name, type, analyze):
+    from c_weave.wallpaper import analyze_wallpaper, import_wallpaper
+
     try:
         wallpaper_id = import_wallpaper(path, name, type)
         click.echo(f"Imported wallpaper with ID: {wallpaper_id}")
@@ -52,14 +41,23 @@ def import_wallpaper_cmd(path, name, type, analyze):
 
 @wallpaper.command("analyze")
 @click.argument("wallpaper_id", required=False)
-@click.option("--missing", is_flag=True, help="Analyze all wallpapers without extracted colors")
+@click.option(
+    "--missing", is_flag=True, help="Analyze all wallpapers without extracted colors"
+)
 def analyze_existing_wallpaper(wallpaper_id, missing):
+    from c_weave.wallpaper import (
+        analyze_wallpaper,
+        get_wallpaper,
+        get_wallpapers_missing_metadata,
+    )
+
     def process_wallpaper(wallpaper_id: str):
         try:
             wallpaper = get_wallpaper(wallpaper_id)
             if not wallpaper:
                 click.echo(
-                    f"Error: Wallpaper not found for provided ID {wallpaper_id}", err=True
+                    f"Error: Wallpaper not found for provided ID {wallpaper_id}",
+                    err=True,
                 )
                 return
 
@@ -93,6 +91,9 @@ def analyze_existing_wallpaper(wallpaper_id, missing):
 
 @wallpaper.command("list")
 def list_wallpapers_cmd():
+    from c_weave.utils.color import get_varying_colors, sort_colors
+    from c_weave.wallpaper import list_wallpapers
+
     wallpapers = list_wallpapers()
 
     columns = ["id", "name", "type", "colors", "resolution", "orientation", "filesize"]
@@ -131,8 +132,17 @@ def list_wallpapers_cmd():
 
 @wallpaper.command("show")
 @click.argument("identifier", type=str)
-@click.option("--open", is_flag=True, help="Open the wallpaper in the system image viewer")
+@click.option(
+    "--open", is_flag=True, help="Open the wallpaper in the system image viewer"
+)
 def show_wallpaper(identifier, open):
+    from c_weave.wallpaper import (
+        fuzzy_match_wallpaper,
+        get_random_wallpaper,
+        get_wallpaper,
+        get_wallpaper_path,
+    )
+
     if identifier in ["random", "dark", "light"]:
         wallpaper = get_random_wallpaper(identifier if identifier != "random" else None)
     else:
@@ -165,4 +175,3 @@ def show_wallpaper(identifier, open):
                 subprocess.run(["xdg-open", path], check=True)
     else:
         click.echo("Wallpaper not found.")
-
