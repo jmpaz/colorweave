@@ -136,7 +136,13 @@ def list_schemes():
     is_flag=True,
     help="Show compatible wallpapers, ranked by color similarity",
 )
-def show_scheme(scheme_identifier, wallpapers):
+@click.option(
+    "--format",
+    type=click.Choice(["stdout", "json"]),
+    default="stdout",
+    help="Output format",
+)
+def show_scheme(scheme_identifier, wallpapers, format):
     scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
     scheme = load_scheme(scheme_name)
 
@@ -153,6 +159,37 @@ def show_scheme(scheme_identifier, wallpapers):
             )
     else:
         variants_to_show = scheme.variants.values()
+
+    if format == "json":
+
+        def variant_to_json(variant):
+            result = {
+                "parent_scheme": scheme.name,
+                "variant_name": variant.name,
+                "variant_type": variant.type,
+                "colors": variant.colors,
+            }
+            return result
+
+        if variant_identifier and variant_identifier in scheme.variants:
+            # single variant
+            variant = scheme.variants[variant_identifier]
+            output = variant_to_json(variant)
+        elif variant_identifier and variant_identifier in ["dark", "light"]:
+            # multiple variants of same type
+            output = [variant_to_json(v) for v in variants_to_show]
+        elif variant_identifier:
+            variant = list(variants_to_show)[0]
+            output = variant_to_json(variant)
+        else:
+            # all variants
+            output = {
+                "scheme_name": scheme.name,
+                "variants": {v.name: variant_to_json(v) for v in variants_to_show},
+            }
+
+        click.echo(json.dumps(output, indent=2))
+        return
 
     terminal_width = shutil.get_terminal_size().columns
     stack_tables = terminal_width < 80 and wallpapers
