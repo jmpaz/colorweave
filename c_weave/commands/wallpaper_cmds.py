@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 
@@ -90,11 +91,29 @@ def analyze_existing_wallpaper(wallpaper_id, missing):
 
 
 @wallpaper.command("list")
-def list_wallpapers_cmd():
+@click.option(
+    "--format",
+    type=click.Choice(["stdout", "json"]),
+    default="stdout",
+    help="Output format",
+)
+def list_wallpapers_cmd(format):
     from c_weave.utils.color import get_varying_colors, sort_colors
     from c_weave.wallpaper import list_wallpapers
 
     wallpapers = list_wallpapers()
+
+    if format == "json":
+        # For JSON output, we want to include all data without visual formatting
+        json_wallpapers = []
+        for wallpaper in wallpapers:
+            json_wallpaper = wallpaper.copy()
+            # Convert filesize to MB for consistency
+            json_wallpaper["filesize_mb"] = wallpaper["filesize"] / 1024 / 1024
+            json_wallpapers.append(json_wallpaper)
+
+        click.echo(json.dumps(json_wallpapers, indent=2))
+        return
 
     columns = ["id", "name", "type", "colors", "resolution", "orientation", "filesize"]
 
@@ -135,7 +154,13 @@ def list_wallpapers_cmd():
 @click.option(
     "--open", is_flag=True, help="Open the wallpaper in the system image viewer"
 )
-def show_wallpaper(identifier, open):
+@click.option(
+    "--format",
+    type=click.Choice(["stdout", "json"]),
+    default="stdout",
+    help="Output format",
+)
+def show_wallpaper(identifier, open, format):
     from c_weave.wallpaper import (
         fuzzy_match_wallpaper,
         get_random_wallpaper,
@@ -149,22 +174,35 @@ def show_wallpaper(identifier, open):
         wallpaper = get_wallpaper(identifier) or fuzzy_match_wallpaper(identifier)
 
     if wallpaper:
-        table = Table(box=box.ROUNDED, show_header=False)
-        table.add_column("key", style="bold")
-        table.add_column("value")
+        if format == "json":
+            # For JSON output, include all data with some formatting for consistency
+            json_wallpaper = wallpaper.copy()
+            # Convert filesize to MB for consistency
+            if "filesize" in json_wallpaper:
+                json_wallpaper["filesize_mb"] = json_wallpaper["filesize"] / 1024 / 1024
+            # Add the full path for convenience
+            from c_weave.wallpaper import get_wallpaper_path
 
-        for key, value in wallpaper.items():
-            if key == "id":
-                value = value
-            elif key == "filesize":
-                value = f"{value / 1024 / 1024:.2f} MB"
-            elif key == "colors":
-                color_squares = [f"[{color}]■[/] {color[1:]}" for color in value]
-                value = "  ".join(color_squares)
+            json_wallpaper["path"] = get_wallpaper_path(wallpaper)
 
-            table.add_row(key, str(value))
+            click.echo(json.dumps(json_wallpaper, indent=2))
+        else:
+            table = Table(box=box.ROUNDED, show_header=False)
+            table.add_column("key", style="bold")
+            table.add_column("value")
 
-        console.print(table)
+            for key, value in wallpaper.items():
+                if key == "id":
+                    value = value
+                elif key == "filesize":
+                    value = f"{value / 1024 / 1024:.2f} MB"
+                elif key == "colors":
+                    color_squares = [f"[{color}]■[/] {color[1:]}" for color in value]
+                    value = "  ".join(color_squares)
+
+                table.add_row(key, str(value))
+
+            console.print(table)
 
         if open:
             path = get_wallpaper_path(wallpaper)
