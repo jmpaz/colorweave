@@ -3,7 +3,7 @@ import os
 
 from c_weave.models import Scheme, Variant
 
-from .config import SCHEMES_DIR
+from .config import CACHE_DARK_PATH, CACHE_LIGHT_PATH, SCHEMES_DIR
 
 
 def load_scheme(scheme_name):
@@ -71,3 +71,40 @@ def create_color_profile(scheme):
             "accent2": variant.get_color("color4"),
         }
     return profile
+
+
+def cache_variant(variant, scheme_name):
+    """Cache a specific variant to the appropriate cache file based on its type."""
+    cache_path = CACHE_LIGHT_PATH if variant.type == "light" else CACHE_DARK_PATH
+
+    cache_data = {
+        "scheme_name": scheme_name,
+        "variant_name": variant.name,
+        "variant_type": variant.type,
+        "colors": variant.colors,
+        "timestamp": os.path.getmtime(os.path.join(SCHEMES_DIR, f"{scheme_name}.json")),
+    }
+
+    with open(cache_path, "w") as f:
+        json.dump(cache_data, f, indent=2)
+
+
+def get_cached_variant(variant_type="dark"):
+    """Get the last cached variant of the specified type."""
+    cache_path = CACHE_LIGHT_PATH if variant_type == "light" else CACHE_DARK_PATH
+
+    if not os.path.exists(cache_path):
+        return None
+
+    try:
+        with open(cache_path, "r") as f:
+            cache_data = json.load(f)
+
+        scheme_name = cache_data["scheme_name"]
+        variant_name = cache_data["variant_name"]
+        colors = cache_data["colors"]
+
+        variant = Variant(variant_name, colors, variant_type)
+        return {"variant": variant, "scheme_name": scheme_name}
+    except (json.JSONDecodeError, KeyError):
+        return None

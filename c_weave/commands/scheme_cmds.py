@@ -264,8 +264,71 @@ def analyze_existing_scheme(scheme_name, missing):
         click.echo("Please provide a scheme name or use --missing flag")
 
 
-@scheme.command("apply")
-@click.argument("scheme_identifier")
+@scheme.command("cache")
+@click.option(
+    "--format",
+    type=click.Choice(["stdout", "json"]),
+    default="stdout",
+    help="Output format",
+)
+def show_cached_variants(format):
+    """Show currently cached variants."""
+    from c_weave.config import CACHE_DARK_PATH, CACHE_LIGHT_PATH
+    from c_weave.scheme import get_cached_variant
+
+    dark_cached = get_cached_variant("dark")
+    light_cached = get_cached_variant("light")
+
+    if format == "json":
+        result = {"dark": None, "light": None}
+
+        if dark_cached:
+            result["dark"] = {
+                "scheme_name": dark_cached["scheme_name"],
+                "variant_name": dark_cached["variant"].name,
+                "colors": dark_cached["variant"].colors,
+            }
+
+        if light_cached:
+            result["light"] = {
+                "scheme_name": light_cached["scheme_name"],
+                "variant_name": light_cached["variant"].name,
+                "colors": light_cached["variant"].colors,
+            }
+
+        click.echo(json.dumps(result, indent=2))
+        return
+
+    if not dark_cached and not light_cached:
+        click.echo("No cached variants found.")
+        return
+
+    console.print()
+
+    tables = []
+    if dark_cached:
+        dark_variant = dark_cached["variant"]
+        dark_scheme = dark_cached["scheme_name"]
+        dark_table = create_variant_table(dark_variant)
+        dark_table.title = f"Dark cached variant: {dark_scheme} - {dark_variant.name}"
+        tables.append(dark_table)
+
+    if light_cached:
+        light_variant = light_cached["variant"]
+        light_scheme = light_cached["scheme_name"]
+        light_table = create_variant_table(light_variant)
+        light_table.title = (
+            f"Light cached variant: {light_scheme} - {light_variant.name}"
+        )
+        tables.append(light_table)
+
+    for table in tables:
+        console.print(table)
+        console.print()
+
+
+@scheme.command("from-cache")
+@click.argument("type", type=click.Choice(["light", "dark"]), required=False)
 @click.option(
     "--wallpapers",
     "-w",
@@ -280,34 +343,163 @@ def analyze_existing_scheme(scheme_name, missing):
     default=0.2,
     help="Filter threshold for random selection",
 )
-def set_scheme(scheme_identifier, wallpapers, random, filter_threshold):
-    scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
-    scheme = load_scheme(scheme_name)
+def apply_from_cache(type, wallpapers, random, filter_threshold):
+    """Apply a theme variant from the cache."""
+    from c_weave.scheme import get_cached_variant
 
-    if variant_identifier:
-        if variant_identifier in scheme.variants:
-            variant_to_apply = scheme.variants[variant_identifier]
-        elif variant_identifier in ["dark", "light"]:
-            variants = [
-                v for v in scheme.variants.values() if v.type == variant_identifier
-            ]
-            if not variants:
-                raise click.UsageError(
-                    f"No {variant_identifier} variant found in scheme '{scheme.name}'"
-                )
-            variant_to_apply = variants[0]
-        else:
-            raise click.UsageError(
-                f"Variant '{variant_identifier}' not found in scheme '{scheme.name}'"
+    # Default to dark if not specified
+    if not type:
+        type = "dark"
+
+    cached_data = get_cached_variant(type)
+    if not cached_data:
+        raise click.UsageError(f"No cached {type} variant found.")
+
+    variant = cached_data["variant"]
+    scheme_name = cached_data["scheme_name"]
+
+    # Apply the variant
+    variant.apply()
+    console.print()
+    console.print(f"Applied cached {scheme_name} - {variant.name} ({variant.type})")
+
+    variant_table = create_variant_table(variant, show_title=False)
+
+    if wallpapers:
+        try:
+            from c_weave.wallpaper import (
+                determine_wallpapers_to_set,
+                get_compatible_wallpapers,
+                get_displays,
+                get_wallpaper,
+                set_wallpapers,
             )
+
+            # Load the full scheme for compatibility check with wallpapers
+            scheme = load_scheme(scheme_name)
+
+            displays = get_displays()
+            compatible_wallpapers = get_compatible_wallpapers(scheme, variant, 1.0)
+            wallpapers_to_set = determine_wallpapers_to_set(
+                compatible_wallpapers, displays, random, filter_threshold
+            )
+            if wallpapers_to_set:
+                set_wallpapers(wallpapers_to_set)
+
+                set_wallpaper_list = []
+                for wallpaper_info in wallpapers_to_set:
+                    wallpaper_id = os.path.basename(wallpaper_info["wallpaper"]).split(
+                        "."
+                    )[0]
+                    wallpaper = get_wallpaper(wallpaper_id)
+                    if wallpaper:
+                        set_wallpaper_list.append(wallpaper)
+
+                if set_wallpaper_list:
+                    wallpaper_table = create_wallpaper_table(
+                        set_wallpaper_list, show_title=False
+                    )
+
+                    grid = Table.grid(padding=1)
+                    grid.add_row(variant_table, wallpaper_table)
+                    console.print(grid)
+                else:
+                    click.echo("No wallpaper information available for display")
+            else:
+                click.echo("No suitable wallpapers found for any display")
+        except Exception as e:
+            click.echo(f"Error setting wallpapers: {str(e)}", err=True)
     else:
-        variant_to_apply = next(iter(scheme.variants.values()))
+        console.print()
+        console.print(variant_table)
+
+
+@scheme.command("apply")
+@click.argument("scheme_identifier", required=False)
+@click.option(
+    "--wallpapers",
+    "-w",
+    is_flag=True,
+    help="Set matching wallpapers for connected displays",
+)
+@click.option("--random", "-r", is_flag=True, help="Randomly select wallpapers")
+@click.option(
+    "--filter-threshold",
+    "-f",
+    type=float,
+    default=0.2,
+    help="Filter threshold for random selection",
+)
+@click.option(
+    "--no-cache",
+    "-n",
+    is_flag=True,
+    help="Skip caching the theme variant",
+)
+@click.option(
+    "--from-cache",
+    "-c",
+    type=click.Choice(["light", "dark"]),
+    help="Apply a theme variant from the cache",
+)
+def set_scheme(
+    scheme_identifier, wallpapers, random, filter_threshold, no_cache, from_cache
+):
+    if from_cache:
+        from c_weave.scheme import get_cached_variant
+
+        cached_data = get_cached_variant(from_cache)
+        if not cached_data:
+            raise click.UsageError(f"No cached {from_cache} variant found.")
+
+        variant_to_apply = cached_data["variant"]
+        scheme_name = cached_data["scheme_name"]
+
+        scheme = load_scheme(scheme_name)
+    else:
+        if not scheme_identifier:
+            raise click.UsageError(
+                "Scheme identifier is required when not using --from-cache"
+            )
+
+        scheme_name, variant_identifier = parse_scheme_identifier(scheme_identifier)
+        scheme = load_scheme(scheme_name)
+
+    if not from_cache:
+        if variant_identifier:
+            if variant_identifier in scheme.variants:
+                variant_to_apply = scheme.variants[variant_identifier]
+            elif variant_identifier in ["dark", "light"]:
+                variants = [
+                    v for v in scheme.variants.values() if v.type == variant_identifier
+                ]
+                if not variants:
+                    raise click.UsageError(
+                        f"No {variant_identifier} variant found in scheme '{scheme.name}'"
+                    )
+                variant_to_apply = variants[0]
+            else:
+                raise click.UsageError(
+                    f"Variant '{variant_identifier}' not found in scheme '{scheme.name}'"
+                )
+        else:
+            variant_to_apply = next(iter(scheme.variants.values()))
+
+    if not no_cache and not from_cache:
+        from c_weave.scheme import cache_variant
+
+        cache_variant(variant_to_apply, scheme_name)
 
     variant_to_apply.apply()
     console.print()
-    console.print(
-        f"Applied {scheme.name} - {variant_to_apply.name} ({variant_to_apply.type})"
-    )
+    if from_cache:
+        console.print(
+            f"Applied cached {scheme_name} - {variant_to_apply.name} ({variant_to_apply.type})"
+        )
+    else:
+        console.print(
+            f"Applied {scheme.name} - {variant_to_apply.name} ({variant_to_apply.type})"
+        )
 
     variant_table = create_variant_table(variant_to_apply, show_title=False)
 
