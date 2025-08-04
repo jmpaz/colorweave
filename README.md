@@ -6,7 +6,7 @@
 ### Schemes
 
 #### `list`
-<img src="https://github.com/user-attachments/assets/79e61328-d350-4c38-a83a-bfbda805d5dfc" width="500">
+<img src="https://github.com/user-attachments/assets/01c226be-6786-438d-aa05-6e619a1cdfc2" width="500">
 
 #### `show`
 <img src="https://github.com/user-attachments/assets/02b6bbfa-2785-4777-82b0-826bda5dddd9" width="700">
